@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOD Dashboard - MITCORER</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="auth-styles.css" />
+    <style>
+        .dashboard-main {
+            padding: 20px 40px;
+            max-width: 1400px;
+            margin: auto;
+        }
+        .hod-welcome {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        .hod-welcome h2 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+        .hod-welcome p {
+            margin: 5px 0 0;
+            color: var(--label-color);
+        }
+        .log-section h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .log-table th, .log-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .log-table th {
+            background-color: #ff0000;
+            font-weight: 600;
+        }
+        .log-table tr:last-child td {
+            border-bottom: none;
+        }
+        .log-table tr:hover {
+            background-color: #f0f2f5;
+        }
+        .logout-btn {
+            background-color: var(--error-color);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: #000000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mit-header">
+    <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
+    <div class="header-text">
+      <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
+      <h1>MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi</h1>
+      <p class="aff-text">
+        Affiliated to Punyashlok Ahilyadevi Holkar Solapur University (PAH) Solapur, Approved by AICTE, New Delhi,
+        Recognised by Govt. Of Maharashtra, DTE Mumbai.<br />
+        <strong>DTE CODE - 06901</strong>
+      </p>
+    </div>
+  </header>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div id="hod-department-title" class="logo">HOD Dashboard</div>
+        <ul class="nav-links">
+            <li><a href="hod-analysis.html" style="color: rgb(255, 255, 255); text-decoration: none; padding: 8px 12px; border-radius: 8px; background-color: var(--primary-color);">Analysis</a></li>
+            <li><button id="logoutBtn" class="logout-btn">Logout</button></li>
+        </ul>
+    </nav>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-main">
+        <section id="hodWelcome" class="hod-welcome">
+            <h2>Welcome, HOD!</h2>
+            <p>Here's the real-time library entry overview</p>
+        </section>
+
+        <section class="stats-cards">
+            <div class="card">
+                <h3>Today's Visitors </h3>
+                <p id="totalDeptVisitors">0</p>
+            </div>
+            <div class="card">
+                <h3>Currently Inside </h3>
+                <p id="currentlyInsideDept">0</p>
+            </div>
+        </section>
+
+        <section class="log-section">
+            <h3 id="logTitle">Today's Log</h3>
+            <div class="table-responsive">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Barcode</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hodLogTableBody">
+                        <tr><td colspan="4" style="text-align:center;">Loading logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Developed by Durgesh Borole | Raghvendra Gupta | Rahul Baravkar | Bhogesh Allapure</p>
+    </footer>
+
+    <!-- Script -->
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('authToken');
+            const department = localStorage.getItem('hodDepartment');
+
+            if (!token || !department) {
+                console.warn("🔒 No login found. Redirecting...");
+                window.location.href = 'unified-login.html';
+                return;
+            }
+
+            // Update Titles
+            document.getElementById('hod-department-title').textContent = `${department} Department`;
+            document.querySelector('.hod-welcome h2').textContent = `Welcome`;
+            document.getElementById('logTitle').textContent = `Today's Log for ${department}`;
+
+            try {
+                const res = await fetch('http://localhost:5000/all-logs');
+                const allLogs = await res.json();
+
+                const today = new Date().toISOString().split('T')[0];
+                const deptLogsToday = allLogs.filter(log =>
+                    log.department === department && log.date === today
+                );
+
+                document.getElementById('totalDeptVisitors').textContent = deptLogsToday.length;
+                document.getElementById('currentlyInsideDept').textContent =
+                    deptLogsToday.filter(log => !log.exitTime).length;
+
+                const tableBody = document.getElementById('hodLogTableBody');
+                tableBody.innerHTML = '';
+
+                if (deptLogsToday.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No entries recorded for your department today.</td></tr>`;
+                } else {
+                    deptLogsToday.forEach(log => {
+                        const entryTime = new Date(log.entryTime).toLocaleTimeString();
+                        const exitTime = log.exitTime
+                            ? new Date(log.exitTime).toLocaleTimeString()
+                            : 'Inside';
+                        const row = `
+                            <tr>
+                                <td>${log.name}</td>
+                                <td>${log.barcode}</td>
+                                <td>${entryTime}</td>
+                                <td>${exitTime}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+                document.getElementById('hodLogTableBody').innerHTML =
+                    '<tr><td colspan="4" style="text-align:center; color:red;">Failed to load data.</td></tr>';
+            }
+        });
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('hodDepartment');
+            window.location.href = 'unified-login.html';
+        });
+    </script>
+</body>
+</html>
