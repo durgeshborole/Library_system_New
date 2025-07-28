@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const lastEntryEl = document.querySelector(".card:nth-child(4) p");
 
   try {
-    const res = await fetch("http://localhost:5000/stats");
+    const res = await fetch("/stats");
     const stats = await res.json();
 
     totalVisitorsEl.textContent = stats.totalVisitorsToday;
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const lastEntryEl = document.querySelector(".card:nth-child(4) p");
 
   try {
-    const res = await fetch("http://localhost:5000/stats");
+    const res = await fetch("/stats");
     const stats = await res.json();
 
     totalVisitorsEl.textContent = stats.totalVisitorsToday;
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 🚀 Load notices also
   try {
-    const res = await fetch("http://localhost:5000/notices");
+    const res = await fetch("/notices");
     const notices = await res.json();
 
     const noticeList = document.getElementById("noticeList");

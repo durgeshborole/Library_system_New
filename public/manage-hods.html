@@ -164,7 +164,7 @@
 
             async function fetchHods() {
                 try {
-                    const response = await fetch('http://localhost:5000/api/hods', { headers: authHeader });
+                    const response = await fetch('/api/hods', { headers: authHeader });
 
                     // ✅ UPDATED ERROR HANDLING:
                     // If the response is not OK, we'll try to read the server's message.
@@ -217,7 +217,7 @@
             window.deleteHod = async (id) => {
                 if (!confirm('Are you sure you want to delete this HOD?')) return;
                 try {
-                    const response = await fetch(`http://localhost:5000/api/hods/${id}`, { method: 'DELETE', headers: authHeader });
+                    const response = await fetch(`/api/hods/${id}`, { method: 'DELETE', headers: authHeader });
                     if (!response.ok) throw new Error('Failed to delete.');
                     document.querySelector(`tr[data-id='${id}']`).remove();
                 } catch (error) {
@@ -236,7 +236,7 @@
                     dob: document.getElementById('updateDob').value
                 });
                 try {
-                    const response = await fetch(`http://localhost:5000/api/hods/${id}`, {
+                    const response = await fetch(`/api/hods/${id}`, {
                         method: 'PUT',
                         headers: { ...authHeader, 'Content-Type': 'application/json' },
                         body

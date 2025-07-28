@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadStudents(page = 1, search = "") {
     try {
-      const res = await fetch(`http://localhost:5000/students?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+      const res = await fetch(`/students?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
       const data = await res.json();
       renderTable(data.students);
       renderPagination(data.totalPages, data.currentPage);

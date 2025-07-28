@@ -100,7 +100,7 @@
             async function fetchDashboardData() {
                 try {
                     // Fetch stats
-                    const statsRes = await fetch('http://localhost:5000/api/principal/stats', { headers });
+                    const statsRes = await fetch('/api/principal/stats', { headers });
                     const statsData = await statsRes.json();
                     if (statsRes.ok) {
                         document.getElementById('totalVisits').textContent = statsData.totalVisitsToday;
@@ -109,7 +109,7 @@
                     }
 
                     // Fetch live logs
-                    const logRes = await fetch('http://localhost:5000/live-log'); // Live log is public, no token needed
+                    const logRes = await fetch('/live-log'); // Live log is public, no token needed
                     const logData = await logRes.json();
                     const logTableBody = document.getElementById('liveLogTable');
                     logTableBody.innerHTML = '';
@@ -284,7 +284,7 @@
             async function fetchDashboardData() {
                 try {
                     // Fetch stats - CORRECTED URL
-                    const statsRes = await fetch('http://localhost:5000/api/principal/stats', { headers });
+                    const statsRes = await fetch('/api/principal/stats', { headers });
                     const statsData = await statsRes.json();
                     if (statsRes.ok) {
                         document.getElementById('totalVisits').textContent = statsData.totalVisitsToday;
@@ -293,7 +293,7 @@
                     }
 
                     // Fetch live logs - CORRECTED URL
-                    const logRes = await fetch('http://localhost:5000/live-log');
+                    const logRes = await fetch('/live-log');
                     const logData = await logRes.json();
                     const logTableBody = document.getElementById('liveLogTable');
                     logTableBody.innerHTML = '';

@@ -72,7 +72,7 @@
             const messageEl = document.getElementById("msg");
             
             try {
-                const res = await fetch("http://localhost:5000/api/register-hod", {
+                const res = await fetch("/api/register-hod", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     // ✅ SEND NEW VALUES IN BODY

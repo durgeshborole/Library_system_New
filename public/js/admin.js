@@ -10,7 +10,7 @@ async function updateAutoExit() {
   }
 
   try {
-    const res = await fetch("http://localhost:5000/admin/auto-exit", {
+    const res = await fetch("/admin/auto-exit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hour: parseInt(hour), minute: parseInt(minute) })
@@ -34,7 +34,7 @@ async function forceExit() {
   }
 
   try {
-    const res = await fetch("http://localhost:5000/admin/force-exit", {
+    const res = await fetch("/admin/force-exit", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -59,7 +59,7 @@ async function forceExit() {
 async function exportLogs(type) {
   const endpoint = type === 'today' ? '/live-log' : '/all-logs';
   try {
-    const res = await fetch(`http://localhost:5000${endpoint}`);
+    const res = await fetch(`${endpoint}`);
     const logs = await res.json();
     let csv = "Name,Department,Designation,Entry Time,Exit Time\n";
     logs.forEach(log => {
@@ -89,7 +89,7 @@ async function submitNotice() {
   }
 
   try {
-    const res = await fetch("http://localhost:5000/admin/notices", {
+    const res = await fetch("/admin/notices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: noticeText })
@@ -114,7 +114,7 @@ async function loadAdminNotices() {
   noticeList.innerHTML = "<li>Loading notices...</li>";
 
   try {
-    const res = await fetch("http://localhost:5000/notices");
+    const res = await fetch("/notices");
     const notices = await res.json();
 
     noticeList.innerHTML = "";
@@ -145,7 +145,7 @@ async function deleteNotice(id) {
   if (!confirm("Are you sure you want to delete this notice?")) return;
 
   try {
-    const res = await fetch(`http://localhost:5000/admin/notices/${id}`, {
+    const res = await fetch(`/admin/notices/${id}`, {
       method: "DELETE"
     });
 
@@ -183,7 +183,7 @@ async function uploadPhoto() {
   formData.append('photo', file);
 
   try {
-    const res = await fetch('http://localhost:5000/upload-photo', {
+    const res = await fetch('/upload-photo', {
       method: 'POST',
       body: formData
     });
@@ -219,7 +219,7 @@ async function bulkUploadPhotos() {
   }
 
   try {
-    const res = await fetch('http://localhost:5000/bulk-upload-photos', {
+    const res = await fetch('/bulk-upload-photos', {
       method: 'POST',
       body: formData
     });
@@ -242,7 +242,7 @@ async function loadMonthlyAwards() {
   resultBox.innerHTML = "⏳ Loading...";
 
   try {
-    const res = await fetch("http://localhost:5000/admin/monthly-awards");
+    const res = await fetch("/admin/monthly-awards");
     const data = await res.json();
 
     if (data.error) {

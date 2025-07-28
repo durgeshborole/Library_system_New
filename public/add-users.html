@@ -180,7 +180,7 @@
 
                 try {
                     const formData = new FormData(singleForm);
-                    const res = await fetch("http://localhost:5000/add-visitor", {
+                    const res = await fetch(" /add-visitor", {
                         method: "POST",
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
@@ -219,7 +219,7 @@
 
                 try {
                     const formData = new FormData(bulkForm);
-                    const res = await fetch("http://localhost:5000/bulk-add-visitors", {
+                    const res = await fetch(" /bulk-add-visitors", {
                         method: "POST",
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
@@ -370,7 +370,7 @@
                 singleSubmitBtn.disabled = true;
                 try {
                     const formData = new FormData(singleForm);
-                    const res = await fetch("http://localhost:5000/add-visitor", {
+                    const res = await fetch(" /add-visitor", {
                         method: "POST",
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
@@ -406,7 +406,7 @@
                 bulkSubmitBtn.disabled = true;
                 try {
                     const formData = new FormData(bulkForm);
-                    const res = await fetch("http://localhost:5000/api/bulk-add-visitors", {
+                    const res = await fetch(" /api/bulk-add-visitors", {
                         method: "POST",
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData

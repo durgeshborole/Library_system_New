@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Sends barcode to backend and updates UI based on response
     async function submitBarcode(barcode) {
         try {
-            const response = await fetch("http://localhost:5000/scan", {
+            const response = await fetch("/scan", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ barcode }),
@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Fetches current day's log from backend
     async function fetchLiveLog() {
         try {
-            const response = await fetch("http://localhost:5000/live-log");
+            const response = await fetch("/live-log");
             const log = await response.json();
             updateLiveLog(log);
         } catch (err) {
@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function loadLiveLog() {
         try {
-            const res = await fetch("http://localhost:5000/live-log");
+            const res = await fetch("/live-log");
             const logs = await res.json();
             const logTable = document.getElementById("logTable");
             logTable.innerHTML = "";

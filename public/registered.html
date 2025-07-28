@@ -85,7 +85,7 @@
         const cacheBuster = new Date().getTime();
 
         // ✅ CORRECTED: Using a relative URL and adding the cache buster.
-        const res = await fetch(`http://localhost:5000/students?page=${page}&limit=${limit}&search=${search}&_=${cacheBuster}`);
+        const res = await fetch(`/students?page=${page}&limit=${limit}&search=${search}&_=${cacheBuster}`);
         const data = await res.json();
 
         const visitors = data.students || [];

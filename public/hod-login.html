@@ -97,7 +97,7 @@
                     const password = document.getElementById('password').value;
 
                     try {
-                        const res = await fetch("http://localhost:5000/api/hod-login", {
+                        const res = await fetch("/api/hod-login", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ email, password }),
@@ -137,7 +137,7 @@
                     const otp = document.getElementById('otp').value;
 
                     try {
-                        const res = await fetch("http://localhost:5000/api/hod/verify-login", {
+                        const res = await fetch("/api/hod/verify-login", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ email, otp }),

@@ -10,7 +10,7 @@
 
 //     async function fetchData() {
 //       try {
-//         const res = await fetch("http://localhost:5000/all-logs");
+//         const res = await fetch("/all-logs");
 //         data = await res.json();
 //         renderTable(data);
 //       } catch (err) {
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch data from backend
   async function fetchData() {
     try {
-      const res = await fetch("http://localhost:5000/all-logs");
+      const res = await fetch("/all-logs");
       data = await res.json();
       renderTable(data);
     } catch (err) {
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isConfirmed) {
         try {
-            const response = await fetch('http://localhost:5000/api/clear-database', {
+            const response = await fetch('/api/clear-database', {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

@@ -94,7 +94,8 @@
 
         <div class="profile-container">
             <a href="unified-login.html" class="nav-button" id="loginBtn">Login</a>
-            <div class="profile" id="profileMenu" style="display: none;">
+            <div
+             class="profile" id="profileMenu" style="display: none;">
                 <img src="/Backend/public/images/profile-icon.jpg" class="profile-icon" id="profileIcon" />
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="profile-details">
@@ -155,7 +156,7 @@
             const consistencyWinnerDiv = document.getElementById('consistencyWinner');
 
             try {
-                const response = await fetch('http://localhost:5000/api/monthly-awards');
+                const response = await fetch('/api/monthly-awards');
                 if (!response.ok) throw new Error('Failed to fetch awards data.');
 
                 const data = await response.json();

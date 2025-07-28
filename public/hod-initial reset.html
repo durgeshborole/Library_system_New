@@ -75,7 +75,7 @@
                 }
 
                 try {
-                    const res = await fetch("http://localhost:5000/api/hod-initial-reset", {
+                    const res = await fetch("/api/hod-initial-reset", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email, newPassword }),

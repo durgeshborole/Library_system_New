@@ -100,7 +100,7 @@
             // --- Data Fetching and Initial Filtering ---
             async function fetchData() {
                 try {
-                    const res = await fetch("http://localhost:5000/all-logs");
+                    const res = await fetch("/all-logs");
                     const allLogs = await res.json();
                     
                     // Pre-filter all logs to only include the HOD's department
