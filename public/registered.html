@@ -27,14 +27,14 @@
 <nav class="navbar">
     <div class="logo">Registered Students</div>
     <ul class="nav-links">
-      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="dashboard.html" class="active">Home</a></li>
       <li><a href="log.html">Log Entries</a></li>
       <li><a href="analysis.html">Analysis</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
 
      <div class="profile-container">
-      <a href="unified-login.html" class="nav-button" id="loginBtn">Login</a>
+      <a href="dashboard.html" class="nav-button" id="loginBtn">Login</a>
       <div class="profile" id="profileMenu" style="display: none;">
         <img src="/images/profile-icon.png" alt="Profile" class="profile-icon" id="profileIcon" />
         <div class="profile-dropdown" id="profileDropdown">
@@ -241,7 +241,7 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('adminEmail');
             alert('You have been logged out.');
-            window.location.href = 'unified-login.html';
+            window.location.href = 'index.html';
         });
     });
   </script>

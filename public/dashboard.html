@@ -1,29 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Library Entry Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Library Dashboard</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="auth-styles.css" />
-  <style>
-    .danger-btn {
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      padding: 15px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      
-      
-    }
-  
-    .filters { display: flex; gap: 15px; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .filters select, .filters input, .filters button { padding: 1px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
-        .filters button { background: var(--primary-color); color: white; cursor: pointer; border: 10px; }
-  </style>
 </head>
+
 <body>
+  <!-- MITCORER Header -->
   <header class="mit-header">
     <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
     <div class="header-text">
@@ -37,10 +23,23 @@
     </div>
   </header>
 
- <nav class="navbar">
-    
+
+  <!-- Navbar -->
+  <!-- <nav class="navbar">
+    <div class="logo">Dashboard</div>
     <ul class="nav-links">
-      <li><a href="dashboard.html" class="active">Home</a></li>
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="log.html">Log Entries</a></li>
+      <li><a href="analysis.html">Analysis</a></li>
+      <li><a href="About.html">About</a></li>
+      
+    </ul>
+  </nav> -->
+
+  <nav class="navbar">
+    <div class="logo">Dashboard</div>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Home</a></li>
       <li><a href="log.html">Log Entries</a></li>
       <li><a href="analysis.html">Analysis</a></li>
       <li><a href="admin.html">Admin</a></li>
@@ -49,7 +48,7 @@
      <div class="profile-container">
       <a href="dashboard.html" class="nav-button" id="loginBtn">Login</a>
       <div class="profile" id="profileMenu" style="display: none;">
-        <img src="./images/profile-icon.jpg" alt="Profile" class="profile-icon" id="profileIcon" />
+        <img src="./images/profile-icon.jpg"  class="profile-icon" id="profileIcon" />
         <div class="profile-dropdown" id="profileDropdown">
             <div class="profile-details">
                 <p class="profile-name">Administrator</p>
@@ -61,55 +60,75 @@
     </div>
   </nav>
 
-  <main class="analysis-content">
-    <h2>📊 Entry Analysis</h2>
 
-    <div class="filters">
-      <select id="departmentFilter">
-        <option value="">All Departments</option>
-        <option value="Computer Science">CSE</option>
-        <option value="Mechanical">ME</option>
-        <option value="Civil">CE</option>
-        <option value="Electronics and Communication">E&TC</option>
-        <option value="Electronics and Computer">ECE</option>
-      </select>
+  <!-- Main Content -->
+  <main class="dashboard-home">
 
-      <select id="designationFilter">
-        <option value="">All Designations</option>
-        <option value="Student">Student</option>
-        <option value="Faculty">Staff</option>
-      </select>
+    <!-- Welcome Message -->
+    <section class="welcome">
+      <h2>Welcome to the Library Entry Management Dashboard</h2>
+      <p>This portal helps in tracking student and staff entries in real-time.</p>
+    </section>
 
-      <input type="date" id="startDate" />
-      <input type="date" id="endDate" />
+    <!-- Quick Stats -->
+    <section class="stats-cards">
+      <div class="card">
+        <h3>Total Visitors Today</h3>
+        <p>120</p>
+      </div>
+      <div class="card">
+        <h3>Currently Inside</h3>
+        <p>35</p>
+      </div>
+      <div class="card">
+        <h3>Most Frequent Dept.</h3>
+        <p>CSE</p>
+      </div>
+      <div class="card">
+        <h3>Last Entry</h3>
+        <p>03:45 PM</p>
+      </div>
+    </section>
 
-      <button id="exportBtn">Export to CSV</button>
-      
-      <button id="clearDbBtn" class="danger-btn">Clear Logs</button>
-    </div>
+    <!-- Navigation Tiles -->
+    <section class="nav-tiles">
+      <a href="log.html" class="tile">📜 View Entry Logs</a>
+      <a href="registered.html" class="tile">📘 Registered Students</a>
+      <a href="admin.html" class="tile">⚙️ Admin Panel</a>
+    </section>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Department</th>
-          <th>Designation</th>
-          <th>Entry Date</th>
-          <th>Entry Time</th>
-          <th>Exit Time</th>
-        </tr>
-      </thead>
-      <tbody id="analysisTable">
-        </tbody>
-    </table>
+    <!-- Library Notices -->
+    <section class="notices">
+      <h3>📢 Library Notices</h3>
+      <ul id="noticeList">
+        <li>Loading latest notices...</li>
+      </ul>
+    </section>
   </main>
 
+  <!-- Footer -->
   <footer class="footer">
     <p>Developed by Durgesh Borole | Raghvendra Gupta | Rahul Baravkar | Bhogesh Allapure</p>
   </footer>
+  <script src="./js/stats.js"></script>
+  <script>
+    const openBtn = document.getElementById("openSidebar");
+    const closeBtn = document.getElementById("closeSidebar");
+    const sidebar = document.getElementById("sidebar");
 
-  <script src="./js/analysis.js"></script>
+    openBtn.addEventListener("click", () => {
+      sidebar.classList.add("open");
+    });
+
+    closeBtn.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+    });
+  </script>
+
+
+
 </body>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const loginBtn = document.getElementById('loginBtn');

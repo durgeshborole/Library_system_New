@@ -149,7 +149,7 @@
 
             if (!token || !department) {
                 console.warn("🔒 No login found. Redirecting...");
-                window.location.href = 'unified-login.html';
+                window.location.href = 'index.html';
                 return;
             }
 
@@ -204,7 +204,7 @@
         document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('authToken');
             localStorage.removeItem('hodDepartment');
-            window.location.href = 'unified-login.html';
+            window.location.href = 'index.html';
         });
     </script>
 </body>
