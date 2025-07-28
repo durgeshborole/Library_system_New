@@ -489,6 +489,12 @@ function getCurrentDateString() {
 
 // });
 
+
+app.get('/', (req, res) => {
+  // Change 'unified-login.html' to whichever page you want as the front page
+  res.redirect('/unified-login.html');
+});
+
 app.post('/scan', async (req, res) => {
   const barcode = req.body?.barcode;
   if (!barcode) {
