@@ -81,7 +81,7 @@ const AdminSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   // 👇 Add these fields
-
+ 
 });
 
 
@@ -93,9 +93,9 @@ const HodSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   department: { type: String, required: true },
-  isVerified: { type: Boolean, default: false },
-  otp: { type: String },
-  otpExpires: { type: Date }
+  // isVerified: { type: Boolean, default: false },
+  // otp: { type: String },
+  // otpExpires: { type: Date }
 });
 
 
@@ -522,7 +522,7 @@ app.post('/scan', async (req, res) => {
     // After successfully saving, broadcast a signal to all connected clients
     io.emit('logUpdate');
     console.log("📢 Broadcast 'logUpdate' signal to all clients.");
-
+    
     return res.status(200).json({ status: existingLog ? "exit" : "entry", ...savedLog._doc, photoUrl: visitor.photoUrl });
   } catch (error) {
     console.error("Scan error:", error);
@@ -681,7 +681,7 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Notice GET API
-app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
+app.get('/notices',authenticateToken,isAdmin, async (req, res) => {
   try {
     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
     res.status(200).json(notices);
@@ -702,7 +702,7 @@ app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) =>
   }
 });
 
-app.post('/upload-photo', upload.single('photo'), authenticateToken, isAdmin, async (req, res) => {
+app.post('/upload-photo', upload.single('photo'),authenticateToken,isAdmin, async (req, res) => {
   const barcode = req.body.barcode;
   if (!barcode || !req.file) {
     return res.status(400).json({ success: false, message: 'Barcode and photo required.' });
@@ -728,7 +728,7 @@ app.post('/upload-photo', upload.single('photo'), authenticateToken, isAdmin, as
   }
 });
 
-app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, isAdmin, async (req, res) => {
+app.post('/bulk-upload-photos', upload.array('photos', 500),authenticateToken,isAdmin, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'No photos uploaded.' });
@@ -1127,7 +1127,7 @@ app.post("/api/register", async (req, res) => {
 
   } catch (err) {
     // ✅ IMPROVED LOGGING: This will now print the specific database or code error.
-    console.error("❌ Registration error:", err);
+    console.error("❌ Registration error:", err); 
     res.status(500).json({ success: false, message: "Server error during registration" });
   }
 });
@@ -1283,7 +1283,7 @@ app.post("/api/register-hod", async (req, res) => {
     const { email, password, department } = req.body;
 
     // ✅ Validate fields
-    if (!email || !password || !department) {
+    if (!email || !password || !department ) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
@@ -1663,69 +1663,38 @@ app.post("/api/login/unified", async (req, res) => {
     }
 
     // Step 3: If not an Admin or Principal, check if the user is an HOD
-    //     const hod = await Hod.findOne({ email });
-    //     if (hod) {
-    //       const match = await bcrypt.compare(password, hod.password);
-    //       if (match) {
-    //         // HODs have a special one-time verification flow
-    //         if (!hod.isVerified) {
-    //           const otp = crypto.randomInt(100000, 999999).toString();
-    //           hod.otp = otp;
-    //           hod.otpExpires = Date.now() + 10 * 60 * 1000;
-    //           await hod.save();
-    //           // You would typically send an email with the OTP here
-    //           console.log(`HOD Login OTP for ${hod.email}: ${otp}`);
-    //           return res.json({ success: true, verificationRequired: true, role: 'hod', message: "HOD verification required. An OTP has been sent." });
-    //         } else {
-    //           const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
-    //           return res.json({ success: true, token, role: 'hod', department: hod.department });
-    //         }
-    //       }
-    //     }
-
-    //     // Step 4: If user is not found in any collection, send an error
-    //     return res.status(401).json({ message: "Invalid credentials." });
-
-    //   } catch (error) {
-    //     console.error("Unified login error:", error);
-    //     res.status(500).json({ message: "Server error during login." });
-    //   }
-    // });
     const hod = await Hod.findOne({ email });
     if (hod) {
       const match = await bcrypt.compare(password, hod.password);
       if (match) {
-        if (!hod.isVerified) {
-          const otp = crypto.randomInt(100000, 999999).toString();
-          hod.otp = otp;
-          hod.otpExpires = Date.now() + 600000; // 10 minutes
-          await hod.save();
+        // HODs have a special one-time verification flow
+        // if (!hod.isVerified) {
+        //   const otp = crypto.randomInt(100000, 999999).toString();
+        //   hod.otp = otp;
+        //   hod.otpExpires = Date.now() + 10 * 60 * 1000;
+        //   await hod.save();
+        //   // You would typically send an email with the OTP here
+        //   console.log(`HOD Login OTP for ${hod.email}: ${otp}`);
+        //   return res.json({ success: true, verificationRequired: true, role: 'hod', message: "HOD verification required. An OTP has been sent." });
+        // } else {
+        //   const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
+        //   return res.json({ success: true, token, role: 'hod', department: hod.department });
+        // }
 
-          // This part now works because 'transporter' is defined
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: hod.email,
-            subject: 'HOD Account Verification Code',
-            html: `<p>Your one-time verification code is: <strong>${otp}</strong>. It will expire in 10 minutes.</p>`
-          });
-
-          return res.json({ success: true, verificationRequired: true, email: hod.email });
-        } else {
-          const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
-          return res.json({ success: true, token, role: 'hod', department: hod.department });
-        }
+        const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
+        return res.json({ success: true, token, role: 'hod', department: hod.department });
       }
     }
 
-    // Step 4: If user is not found or password doesn't match for any role
+    // Step 4: If user is not found in any collection, send an error
     return res.status(401).json({ message: "Invalid credentials." });
 
   } catch (error) {
-    // ✅ IMPROVED LOGGING: This will now show the specific error in your terminal
-    console.error("❌ Unified login error:", error);
+    console.error("Unified login error:", error);
     res.status(500).json({ message: "Server error during login." });
   }
 });
+
 
 // ✅ ADDED: New endpoint for generating custom reports
 app.get('/api/reports', authenticateToken, isAdminOrPrincipal, async (req, res) => {
