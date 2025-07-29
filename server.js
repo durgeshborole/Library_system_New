@@ -1165,29 +1165,29 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
 //   }
 // });
 
-// // Register Admin
-// app.post("/api/register", async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-//     if (!email || !password) {
-//       return res.status(400).json({ success: false, message: "Email and password are required." });
-//     }
+// Register Admin
+app.post("/api/register", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required." });
+    }
 
-//     const existing = await Admin.findOne({ email });
-//     if (existing) {
-//       return res.status(409).json({ success: false, message: "An account with this email already exists." });
-//     }
+    const existing = await Admin.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
 
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const newAdmin = new Admin({ email, password: hashedPassword });
-//     await newAdmin.save();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newAdmin = new Admin({ email, password: hashedPassword });
+    await newAdmin.save();
 
-//     res.status(201).json({ success: true, message: "Registered successfully" });
-//   } catch (err) {
-//     console.error("❌ Registration error:", err);
-//     res.status(500).json({ success: false, message: "Server error during registration" });
-//   }
-// });
+    res.status(201).json({ success: true, message: "Registered successfully" });
+  } catch (err) {
+    console.error("❌ Registration error:", err);
+    res.status(500).json({ success: false, message: "Server error during registration" });
+  }
+});
 
 
 // app.post("/api/register-hod",
