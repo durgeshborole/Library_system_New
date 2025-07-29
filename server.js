@@ -1191,27 +1191,59 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
 // });
 
 
-app.post("/api/register-hod",
-  authenticateToken,
-  isAdmin,
-  hodRegistrationValidationRules(),
-  validate,
-  async (req, res) => {
-    try {
-      const { email, password, department, mobile, dob } = req.body;
-      const existingHod = await Hod.findOne({ email });
-      if (existingHod) {
-        return res.status(409).json({ message: "An HOD with this email already exists." });
-      }
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const newHod = new Hod({ email, password: hashedPassword, department, mobile, dob });
-      await newHod.save();
-      res.status(201).json({ success: true, message: "HOD registered successfully." });
-    } catch (err) {
-      console.error("HOD registration error:", err);
-      res.status(500).json({ message: "Server error during HOD registration." });
+// app.post("/api/register-hod",
+//   authenticateToken,
+//   isAdmin,
+//   hodRegistrationValidationRules(),
+//   validate,
+//   async (req, res) => {
+//     try {
+//       const { email, password, department, mobile, dob } = req.body;
+//       const existingHod = await Hod.findOne({ email });
+//       if (existingHod) {
+//         return res.status(409).json({ message: "An HOD with this email already exists." });
+//       }
+//       const hashedPassword = await bcrypt.hash(password, 10);
+//       const newHod = new Hod({ email, password: hashedPassword, department, mobile, dob });
+//       await newHod.save();
+//       res.status(201).json({ success: true, message: "HOD registered successfully." });
+//     } catch (err) {
+//       console.error("HOD registration error:", err);
+//       res.status(500).json({ message: "Server error during HOD registration." });
+//     }
+//   });
+
+app.post("/api/register-hod", async (req, res) => {
+  try {
+    const { email, password, department, mobile, dob } = req.body;
+
+    if (!email || !password || !department || !mobile || !dob) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
     }
-  });
+
+    const existingHod = await User.findOne({ email });
+    if (existingHod) {
+      return res.status(400).json({ success: false, message: "HOD already registered with this email" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newHod = new User({
+      email,
+      password: hashedPassword,
+      role: "hod",
+      department,
+      mobile,
+      dob
+    });
+
+    await newHod.save();
+    res.json({ success: true, message: "HOD registered successfully" });
+  } catch (err) {
+    console.error("Register HOD Error:", err);
+    res.status(500).json({ success: false, message: "Server error during HOD registration" });
+  }
+});
+
 
 // Password Reset for Admin
 app.post("/api/reset-password", async (req, res) => {
