@@ -18,7 +18,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 require("dotenv").config();
 const memoryUpload = multer({ storage: multer.memoryStorage() });
-const User = require('./models/User'); // Correct path to your User model
+
 
 
 
@@ -86,16 +86,7 @@ const AdminSchema = new mongoose.Schema({
 });
 
 
-const userSchema = new mongoose.Schema({
-  email: String,
-  password: String,
-  role: String,           // "admin", "hod", etc.
-  department: String,
-  mobile: String,
-  dob: String
-});
 
-module.exports = mongoose.model("User", userSchema);
 
 // server.js
 
@@ -1231,31 +1222,34 @@ app.post("/api/register-hod", async (req, res) => {
     const { email, password, department, mobile, dob } = req.body;
 
     if (!email || !password || !department || !mobile || !dob) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
+      return res.status(400).json({ success: false, message: "All fields are required." });
     }
 
-    const existingHod = await User.findOne({ email });
+    const existingHod = await Hod.findOne({ email });
     if (existingHod) {
-      return res.status(400).json({ success: false, message: "HOD already registered with this email" });
+      return res.status(409).json({ success: false, message: "HOD with this email already exists." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newHod = new User({
+
+    const newHod = new Hod({
       email,
       password: hashedPassword,
-      role: "hod",
       department,
       mobile,
-      dob
+      dob,
+      isVerified: false
     });
 
     await newHod.save();
-    res.json({ success: true, message: "HOD registered successfully" });
+    res.status(201).json({ success: true, message: "HOD registered successfully." });
+
   } catch (err) {
-    console.error("Register HOD Error:", err);
-    res.status(500).json({ success: false, message: "Server error during HOD registration" });
+    console.error("❌ HOD registration error:", err);
+    res.status(500).json({ success: false, message: "Server error during HOD registration." });
   }
 });
+
 
 
 // Password Reset for Admin
