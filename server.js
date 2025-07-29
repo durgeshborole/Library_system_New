@@ -1359,10 +1359,10 @@ app.post("/api/reset-password", async (req, res) => {
 
 app.post("/api/register-hod", async (req, res) => {
   try {
-    const { email, password, department, mobile, dob } = req.body;
+    const { email, password, department } = req.body;
 
     // ✅ Validate fields
-    if (!email || !password || !department || !mobile || !dob) {
+    if (!email || !password || !department ) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
@@ -1378,9 +1378,7 @@ app.post("/api/register-hod", async (req, res) => {
       email,
       password: hashedPassword,
       role: "hod",
-      department,
-      mobile,
-      dob
+      department
     });
 
     await newHod.save();
@@ -1481,11 +1479,11 @@ app.get("/api/hods", authenticateToken, isAdmin, async (req, res) => {
 app.put("/api/hods/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, department, mobile, dob } = req.body;
+    const { email, department } = req.body;
 
     const updatedHod = await Hod.findByIdAndUpdate(
       id,
-      { email, department, mobile, dob },
+      { email, department },
       { new: true, runValidators: true }
     );
 

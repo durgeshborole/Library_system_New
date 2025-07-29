@@ -81,7 +81,7 @@
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     // ✅ SEND NEW VALUES IN BODY
-                    body: JSON.stringify({ email, password, department, mobile, dob }),
+                    body: JSON.stringify({ email, password, department }),
                 });
                 const result = await res.json();
                 messageEl.innerText = result.message;
