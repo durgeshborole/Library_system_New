@@ -272,14 +272,14 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const hodEmail = localStorage.getItem('hodEmail');
+            const HodEmail = localStorage.getItem('HodEmail');
             const authToken = localStorage.getItem('authToken');
 
-            if (authToken && hodEmail) {
+            if (authToken && HodEmail) {
                 // User is logged in: hide login button, show profile menu
                 loginBtn.style.display = 'none';
                 profileMenu.style.display = 'block'; // Use 'block' to show the div
-                document.querySelector('.profile-email').textContent = hodEmail;
+                document.querySelector('.profile-email').textContent = HodEmail;
             } else {
                 // User is not logged in: show login button, hide profile menu
                 loginBtn.style.display = 'block';
@@ -300,7 +300,7 @@
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 localStorage.removeItem('authToken');
-                localStorage.removeItem('hodEmail');
+                localStorage.removeItem('HodEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });

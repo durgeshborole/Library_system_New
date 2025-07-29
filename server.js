@@ -1152,7 +1152,7 @@ app.post("/api/register-hod", async (req, res) => {
       email,
       password: hashedPassword,
       department,
-      isVerified: false
+      
     });
 
     await newHod.save();
@@ -1363,11 +1363,7 @@ app.post("/api/hod/verify-login", async (req, res) => {
     }
 
     // If OTP is correct, update the account to be verified
-    hod.isVerified = true;
-    hod.otp = undefined;
-    hod.otpExpires = undefined;
-    await hod.save();
-
+    
     // Now, generate the standard login token
     const token = jwt.sign(
       { id: hod._id, role: 'hod', department: hod.department },
