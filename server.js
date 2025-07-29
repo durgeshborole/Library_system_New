@@ -94,8 +94,6 @@ const HodSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   department: { type: String, required: true },
-  mobile: { type: String }, // New field
-  dob: { type: Date },       // New field
   isVerified: { type: Boolean, default: false },
   otp: { type: String },
   otpExpires: { type: Date }
@@ -494,10 +492,7 @@ function getCurrentDateString() {
 // });
 
 
-app.get('/', (req, res) => {
-  // Change 'unified-login.html' to whichever page you want as the front page
-  res.redirect('/unified-login.html');
-});
+
 
 app.post('/scan', async (req, res) => {
   const barcode = req.body?.barcode;
@@ -687,7 +682,7 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Notice GET API
-app.get('/notices', async (req, res) => {
+app.get('/notices',authenticateToken,isAdmin, async (req, res) => {
   try {
     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
     res.status(200).json(notices);
@@ -708,7 +703,7 @@ app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) =>
   }
 });
 
-app.post('/upload-photo', upload.single('photo'), async (req, res) => {
+app.post('/upload-photo', upload.single('photo'),authenticateToken,isAdmin, async (req, res) => {
   const barcode = req.body.barcode;
   if (!barcode || !req.file) {
     return res.status(400).json({ success: false, message: 'Barcode and photo required.' });
@@ -734,7 +729,7 @@ app.post('/upload-photo', upload.single('photo'), async (req, res) => {
   }
 });
 
-app.post('/bulk-upload-photos', upload.array('photos', 500), async (req, res) => {
+app.post('/bulk-upload-photos', upload.array('photos', 500),authenticateToken,isAdmin, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'No photos uploaded.' });
@@ -1219,9 +1214,9 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
 
 app.post("/api/register-hod", async (req, res) => {
   try {
-    const { email, password, department, mobile, dob } = req.body;
+    const { email, password, department } = req.body;
 
-    if (!email || !password || !department || !mobile || !dob) {
+    if (!email || !password || !department) {
       return res.status(400).json({ success: false, message: "All fields are required." });
     }
 
@@ -1236,8 +1231,6 @@ app.post("/api/register-hod", async (req, res) => {
       email,
       password: hashedPassword,
       department,
-      mobile,
-      dob,
       isVerified: false
     });
 

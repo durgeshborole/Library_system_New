@@ -45,16 +45,16 @@
       <li><a href="admin.html">Admin</a></li>
     </ul>
 
-     <div class="profile-container">
+    <div class="profile-container">
       <a href="index.html" class="nav-button" id="loginBtn">Login</a>
       <div class="profile" id="profileMenu" style="display: none;">
-        <img src="./images/profile-icon.jpg"  class="profile-icon" id="profileIcon" />
+        <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" />
         <div class="profile-dropdown" id="profileDropdown">
-            <div class="profile-details">
-                <p class="profile-name">Administrator</p>
-                <p class="profile-email">email@example.com</p>
-            </div>
-            <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
+          <div class="profile-details">
+            <p class="profile-name">Administrator</p>
+            <p class="profile-email">email@example.com</p>
+          </div>
+          <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
         </div>
       </div>
     </div>
@@ -130,46 +130,88 @@
 </body>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const loginBtn = document.getElementById('loginBtn');
-        const profileMenu = document.getElementById('profileMenu');
-        const profileIcon = document.getElementById('profileIcon');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const logoutBtn = document.getElementById('logoutBtn');
+  document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('loginBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileIcon = document.getElementById('profileIcon');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-        const adminEmail = localStorage.getItem('adminEmail');
-        const authToken = localStorage.getItem('authToken');
+    const adminEmail = localStorage.getItem('adminEmail');
+    const authToken = localStorage.getItem('authToken');
 
-        if (authToken && adminEmail) {
-            // User is logged in: hide login button, show profile menu
-            loginBtn.style.display = 'none';
-            profileMenu.style.display = 'block'; // Use 'block' to show the div
-            document.querySelector('.profile-email').textContent = adminEmail;
-        } else {
-            // User is not logged in: show login button, hide profile menu
-            loginBtn.style.display = 'block';
-            profileMenu.style.display = 'none';
-        }
+    if (authToken && adminEmail) {
+      // User is logged in: hide login button, show profile menu
+      loginBtn.style.display = 'none';
+      profileMenu.style.display = 'block'; // Use 'block' to show the div
+      document.querySelector('.profile-email').textContent = adminEmail;
+    } else {
+      // User is not logged in: show login button, hide profile menu
+      loginBtn.style.display = 'block';
+      profileMenu.style.display = 'none';
+    }
 
-        profileIcon.addEventListener('click', (event) => {
-            profileDropdown.classList.toggle('show');
-            event.stopPropagation();
-        });
-
-        window.addEventListener('click', () => {
-            if (profileDropdown.classList.contains('show')) {
-                profileDropdown.classList.remove('show');
-            }
-        });
-
-        logoutBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('adminEmail');
-            alert('You have been logged out.');
-            window.location.href = 'index.html';
-        });
+    profileIcon.addEventListener('click', (event) => {
+      profileDropdown.classList.toggle('show');
+      event.stopPropagation();
     });
-  </script>
+
+    window.addEventListener('click', () => {
+      if (profileDropdown.classList.contains('show')) {
+        profileDropdown.classList.remove('show');
+      }
+    });
+
+    logoutBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('adminEmail');
+      alert('You have been logged out.');
+      window.location.href = 'index.html';
+    });
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('loginBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileIcon = document.getElementById('profileIcon');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const adminEmail = localStorage.getItem('adminEmail');
+    const authToken = localStorage.getItem('authToken');
+
+    if (authToken && adminEmail) {
+      // User is logged in: hide login button, show profile menu
+      loginBtn.style.display = 'none';
+      profileMenu.style.display = 'block'; // Use 'block' to show the div
+      document.querySelector('.profile-email').textContent = adminEmail;
+    } else {
+      // User is not logged in: show login button, hide profile menu
+      loginBtn.style.display = 'block';
+      profileMenu.style.display = 'none';
+    }
+
+    profileIcon.addEventListener('click', (event) => {
+      profileDropdown.classList.toggle('show');
+      event.stopPropagation();
+    });
+
+    window.addEventListener('click', () => {
+      if (profileDropdown.classList.contains('show')) {
+        profileDropdown.classList.remove('show');
+      }
+    });
+
+    logoutBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('adminEmail');
+      alert('You have been logged out.');
+      window.location.href = 'index.html';
+    });
+  });
+</script>
 
 </html>

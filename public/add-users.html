@@ -112,11 +112,28 @@
     </header>
 
     <nav class="navbar">
-        <div class="logo">Admin</div>
-        <ul class="nav-links">
-            <li><a href="admin.html">Admin Panel</a></li>
-        </ul>
-    </nav>
+    <div class="logo">Add Users</div>
+    <ul class="nav-links">
+      <li><a href="dashboard.html">Home</a></li>
+      <li><a href="log.html">Log Entries</a></li>
+      <li><a href="analysis.html">Analysis</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+
+     <div class="profile-container">
+      <a href="index.html" class="nav-button" id="loginBtn">Login</a>
+      <div class="profile" id="profileMenu" style="display: none;">
+        <img src="./images/profile-icon.jpg"  class="profile-icon" id="profileIcon" />
+        <div class="profile-dropdown" id="profileDropdown">
+            <div class="profile-details">
+                <p class="profile-name">Administrator</p>
+                <p class="profile-email">email@example.com</p>
+            </div>
+            <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
     <main class="dashboard-home">
         <div class="card-container" style="display: flex; gap: 30px; flex-wrap: wrap; justify-content: center;">
@@ -157,200 +174,9 @@
         <p>Developed by Durgesh Borole | Raghvendra Gupta | Rahul Baravkar | Bhogesh Allapure</p>
     </footer>
 
-    <!-- <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('authToken');
-
-            // --- Handler for Single Visitor Form ---
-            const singleForm = document.getElementById("singleVisitorForm");
-            const singleSubmitBtn = document.getElementById("singleSubmitBtn");
-            const singleStatusEl = document.getElementById("singleVisitorStatus");
-
-            singleForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!token) {
-                    singleStatusEl.textContent = 'Error: You must be logged in as an admin.';
-                    singleStatusEl.className = 'message error';
-                    return;
-                }
-
-                singleStatusEl.textContent = 'Adding visitor...';
-                singleStatusEl.className = 'message info';
-                singleSubmitBtn.disabled = true;
-
-                try {
-                    const formData = new FormData(singleForm);
-                    const res = await fetch(" /add-visitor", {
-                        method: "POST",
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: formData
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || 'Failed to add visitor');
-
-                    singleStatusEl.textContent = data.message;
-                    singleStatusEl.className = 'message success';
-                    singleForm.reset();
-                } catch (error) {
-                    singleStatusEl.textContent = 'Error: ' + error.message;
-                    singleStatusEl.className = 'message error';
-                } finally {
-                    singleSubmitBtn.disabled = false;
-                }
-            });
-
-            // --- Handler for Bulk Upload Form ---
-            const bulkForm = document.getElementById("bulkUploadForm");
-            const bulkSubmitBtn = document.getElementById("bulkSubmitBtn");
-            const bulkStatusEl = document.getElementById("bulkUploadStatus");
-
-            bulkForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!token) {
-                    bulkStatusEl.textContent = 'Error: You must be logged in as an admin.';
-                    bulkStatusEl.className = 'message error';
-                    return;
-                }
-
-                // Display the "in-progress" alert immediately
-                bulkStatusEl.textContent = 'Uploading and processing files... This may take a few minutes. Please wait.';
-                bulkStatusEl.className = 'message info';
-                bulkSubmitBtn.disabled = true;
-
-                try {
-                    const formData = new FormData(bulkForm);
-                    const res = await fetch(" /bulk-add-visitors", {
-                        method: "POST",
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        body: formData
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || 'Bulk upload failed.');
-
-                    bulkStatusEl.textContent = data.message;
-                    bulkStatusEl.className = 'message success';
-                    bulkForm.reset();
-                } catch (error) {
-                    bulkStatusEl.textContent = 'Error: ' + error.message;
-                    bulkStatusEl.className = 'message error';
-                } finally {
-                    bulkSubmitBtn.disabled = false;
-                }
-            });
-            const downloadBtn = document.getElementById('downloadSampleBtn');
-            downloadBtn.addEventListener('click', (e) => {
-                e.preventDefault(); // Prevent the link from navigating
-
-                // Define the CSV content with headers and example rows
-                const csvContent = "barcode,name,email,mobile";
-
-                // Create a Blob (a file-like object) from the CSV string
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
-                // Create a temporary link element
-                const link = document.createElement("a");
-
-                // Create a URL for the Blob and set it as the link's href
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-
-                // Set the download attribute with the desired filename
-                link.setAttribute("download", "sample-visitors.csv");
-
-                // Append the link to the body, click it, and then remove it
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-        });
-    </script> -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // const token = localStorage.getItem('authToken');
-
-            // // --- Handler for Single Visitor Form ---
-            // const singleForm = document.getElementById("singleVisitorForm");
-            // const singleSubmitBtn = document.getElementById("singleSubmitBtn");
-            // const singleStatusEl = document.getElementById("singleVisitorStatus");
-            // singleForm.addEventListener('submit', async (e) => {
-            //     e.preventDefault();
-            //     if (!token) {
-            //         singleStatusEl.textContent = 'Error: You must be logged in as an admin.';
-            //         singleStatusEl.className = 'message error';
-            //         return;
-            //     }
-            //     singleStatusEl.textContent = 'Adding visitor...';
-            //     singleStatusEl.className = 'message info';
-            //     singleSubmitBtn.disabled = true;
-            //     try {
-            //         const formData = new FormData(singleForm);
-            //         const res = await fetch("/add-visitor", {
-            //             method: "POST",
-            //             headers: { 'Authorization': `Bearer ${token}` },
-            //             body: formData
-            //         });
-            //         const data = await res.json();
-            //         if (!res.ok) throw new Error(data.message || 'Failed to add visitor');
-            //         singleStatusEl.textContent = data.message;
-            //         singleStatusEl.className = 'message success';
-            //         singleForm.reset();
-            //     } catch (error) {
-            //         singleStatusEl.textContent = 'Error: ' + error.message;
-            //         singleStatusEl.className = 'message error';
-            //     } finally {
-            //         singleSubmitBtn.disabled = false;
-            //     }
-            // });
-
-            // // --- Handler for Bulk Upload Form ---
-            // const bulkForm = document.getElementById("bulkUploadForm");
-            // const bulkSubmitBtn = document.getElementById("bulkSubmitBtn");
-            // const bulkStatusEl = document.getElementById("bulkUploadStatus");
-            // bulkForm.addEventListener('submit', async (e) => {
-            //     e.preventDefault();
-            //     if (!token) {
-            //         bulkStatusEl.textContent = 'Error: You must be logged in as an admin.';
-            //         bulkStatusEl.className = 'message error';
-            //         return;
-            //     }
-            //     bulkStatusEl.textContent = 'Uploading and processing files... Please wait.';
-            //     bulkStatusEl.className = 'message info';
-            //     bulkSubmitBtn.disabled = true;
-            //     try {
-            //         const formData = new FormData(bulkForm);
-            //         const res = await fetch("/api/bulk-add-visitors", {
-            //             method: "POST",
-            //             headers: { 'Authorization': `Bearer ${token}` },
-            //             body: formData
-            //         });
-            //         const data = await res.json();
-            //         if (!res.ok) throw new Error(data.message || 'Bulk upload failed.');
-            //         bulkStatusEl.textContent = data.message;
-            //         bulkStatusEl.className = 'message success';
-            //         bulkForm.reset();
-            //     } catch (error) {
-            //         bulkStatusEl.textContent = 'Error: ' + error.message;
-            //         bulkStatusEl.className = 'message error';
-            //     } finally {
-            //         bulkSubmitBtn.disabled = false;
-            //     }
-            // });
-
-            // // --- Handler for Sample CSV Download ---
-            // const downloadBtn = document.getElementById('downloadSampleBtn');
-            // downloadBtn.addEventListener('click', (e) => {
-            //     e.preventDefault();
-            //     const csvContent = "barcode,name,email,mobile\nS12345,John Doe,john.doe@example.com,9876543210\nF67890,Jane Smith,jane.smith@example.com,1234567890";
-            //     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            //     const link = document.createElement("a");
-            //     const url = URL.createObjectURL(blob);
-            //     link.setAttribute("href", url);
-            //     link.setAttribute("download", "sample-visitors.csv");
-            //     document.body.appendChild(link);
-            //     link.click();
-            //     document.body.removeChild(link);
-            // });
-
+           
 
             const token = localStorage.getItem('authToken');
 
@@ -444,7 +270,7 @@
         });
     </script>
 </body>
-<!-- <script>
+<script>
     document.addEventListener('DOMContentLoaded', () => {
         const loginBtn = document.getElementById('loginBtn');
         const profileMenu = document.getElementById('profileMenu');
@@ -482,10 +308,10 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('adminEmail');
             alert('You have been logged out.');
-            window.location.href = 'unified-login.html';
+            window.location.href = 'index.html';
         });
     });
-</script> -->
+</script>
 
 
 </html>

@@ -26,8 +26,11 @@
     <div class="logo">Admin </div>
     <ul class="nav-links">
       <li><a href="dashboard.html">Home</a></li>
-      <li><a href="log.html">Logs</a></li>
+      <li><a href="log.html">Logs Entries</a></li>
       <li><a href="analysis.html">Analysis</a></li>
+      <li><a href="analysis.html">Analysis</a></li>
+     
+       
      
     </ul>
 
@@ -75,7 +78,7 @@
 
     <section class="card">
       <h3>👤 Registered Users</h3>
-      <p>Manage students and staff registered in the system.</p>
+      <p>Add students and staff registered in the system.</p>
       <button onclick="location.href='add-users.html'">Add Users</button>
     </section>
 
@@ -191,7 +194,7 @@
       localStorage.removeItem('authToken');
       localStorage.removeItem('adminEmail');
       alert('You have been logged out.');
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
     });
   });
 </script>
