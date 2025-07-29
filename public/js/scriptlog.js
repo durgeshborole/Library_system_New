@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Displays visitor details including photo
     function displayVisitor(visitor) {
-        const imageUrl = visitor.photoUrl || "/Backend/public/images/default.jpg";
+        const imageUrl = visitor.photoUrl || "./images/default.jpg";
         visitorDetails.innerHTML = `
       <h2>Visitor Details</h2>
       <div class="visitor-card">
