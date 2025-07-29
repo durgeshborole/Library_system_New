@@ -346,8 +346,8 @@ function decodeBarcode(barcode) {
 
   // --- Data Mappings ---
   const departments = {
-    '1': "Civil Engineering",
-    '2': "Mechanical Engineering",
+    '1': "Civil ",
+    '2': "Mechanical ",
     '3': "Computer Science",
     '4': "Electronics and Telecommunication",
     '5': "Electronics and Computer",
