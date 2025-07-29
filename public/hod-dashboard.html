@@ -121,7 +121,7 @@
                 <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" />
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="profile-details">
-                        <p class="profile-name">Administrator</p>
+                        <p class="profile-name">Hod</p>
                         <p class="profile-email">email@example.com</p>
                     </div>
                     <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
@@ -240,6 +240,48 @@
             localStorage.removeItem('authToken');
             localStorage.removeItem('hodDepartment');
             window.location.href = 'index.html';
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.getElementById('profileIcon');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            const hodEmail = localStorage.getItem('hodEmail');
+            const authToken = localStorage.getItem('authToken');
+
+            if (authToken && hodEmail) {
+                // User is logged in: hide login button, show profile menu
+                loginBtn.style.display = 'none';
+                profileMenu.style.display = 'block'; // Use 'block' to show the div
+                document.querySelector('.profile-email').textContent = hodEmail;
+            } else {
+                // User is not logged in: show login button, hide profile menu
+                loginBtn.style.display = 'block';
+                profileMenu.style.display = 'none';
+            }
+
+            profileIcon.addEventListener('click', (event) => {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            window.addEventListener('click', () => {
+                if (profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            });
+
+            logoutBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
+                alert('You have been logged out.');
+                window.location.href = 'index.html';
+            });
         });
     </script>
 </body>

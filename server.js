@@ -1701,7 +1701,7 @@ app.post("/api/login/unified", async (req, res) => {
           hod.otpExpires = Date.now() + 600000; // 10 minutes
           await hod.save();
 
-          // Send OTP email
+          // This part now works because 'transporter' is defined
           await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: hod.email,
@@ -1716,8 +1716,13 @@ app.post("/api/login/unified", async (req, res) => {
         }
       }
     }
+
+    // Step 4: If user is not found or password doesn't match for any role
     return res.status(401).json({ message: "Invalid credentials." });
+
   } catch (error) {
+    // ✅ IMPROVED LOGGING: This will now show the specific error in your terminal
+    console.error("❌ Unified login error:", error);
     res.status(500).json({ message: "Server error during login." });
   }
 });
