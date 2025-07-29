@@ -84,6 +84,17 @@ const AdminSchema = new mongoose.Schema({
 });
 
 
+const userSchema = new mongoose.Schema({
+  email: String,
+  password: String,
+  role: String,           // "admin", "hod", etc.
+  department: String,
+  mobile: String,
+  dob: String
+});
+
+module.exports = mongoose.model("User", userSchema);
+
 // server.js
 
 const HodSchema = new mongoose.Schema({
