@@ -18,6 +18,8 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 require("dotenv").config();
 const memoryUpload = multer({ storage: multer.memoryStorage() });
+const User = require('./models/User'); // Correct path to your User model
+
 
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
