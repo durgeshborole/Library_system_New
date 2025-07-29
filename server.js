@@ -348,7 +348,7 @@ function decodeBarcode(barcode) {
     '1': "Civil Engineering",
     '2': "Mechanical Engineering",
     '3': "Computer Science",
-    '4': "Electronics and Communication",
+    '4': "Electronics and Telecommunication",
     '5': "Electronics and Computer",
     'B': "Library",
   };
