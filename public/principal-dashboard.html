@@ -198,13 +198,12 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .dashboard-grid {
+       .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             padding: 20px 40px;
         }
-
         .logout-btn {
             background-color: #dc3545;
             color: white;
@@ -213,6 +212,16 @@
             border-radius: 5px;
             cursor: pointer;
             font-weight: 500;
+        }
+        /* ✅ ADDED: New style for the row container */
+        .dashboard-row {
+            display: flex;
+            gap: 20px; /* space between cards */
+            padding: 0 40px;
+            margin-bottom: 20px;
+        }
+        .dashboard-row > .card {
+            flex: 1; /* This makes each card grow to fill available space */
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
@@ -232,16 +241,11 @@
             </p>
         </div>
     </header>
+    
     <nav class="navbar">
         <div class="logo">Library Overview</div>
         <ul class="nav-links">
-            <li><button id="logoutBtn" class="logout-btn">Logout</button></li>
-        </ul>
-    </nav>
-    <nav class="navbar">
-        <div class="logo">Library Overview</div>
-        <ul class="nav-links">
-            <li><a href="analysis.html">Analysis</a></li>
+            <li><a href="principal-analysis.html">Analysis</a></li>
         </ul>
 
         <div class="profile-container">
@@ -400,14 +404,14 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const adminEmail = localStorage.getItem('adminEmail');
+            const principalEmail = localStorage.getItem('principalEmail');
             const authToken = localStorage.getItem('authToken');
 
-            if (authToken && adminEmail) {
+            if (authToken && principalEmail) {
                 // User is logged in: hide login button, show profile menu
                 loginBtn.style.display = 'none';
                 profileMenu.style.display = 'block'; // Use 'block' to show the div
-                document.querySelector('.profile-email').textContent = adminEmail;
+                document.querySelector('.profile-email').textContent = principalEmail;
             } else {
                 // User is not logged in: show login button, hide profile menu
                 loginBtn.style.display = 'block';
@@ -428,7 +432,7 @@
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 localStorage.removeItem('authToken');
-                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('principalEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
@@ -442,14 +446,14 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const adminEmail = localStorage.getItem('adminEmail');
+            const adminEmail = localStorage.getItem('principalEmail');
             const authToken = localStorage.getItem('authToken');
 
             if (authToken && adminEmail) {
                 // User is logged in: hide login button, show profile menu
                 loginBtn.style.display = 'none';
                 profileMenu.style.display = 'block'; // Use 'block' to show the div
-                document.querySelector('.profile-email').textContent = adminEmail;
+                document.querySelector('.profile-email').textContent = principalEmail;
             } else {
                 // User is not logged in: show login button, hide profile menu
                 loginBtn.style.display = 'block';
@@ -470,7 +474,7 @@
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 localStorage.removeItem('authToken');
-                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('principalEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
