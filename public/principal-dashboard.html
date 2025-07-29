@@ -238,6 +238,29 @@
             <li><button id="logoutBtn" class="logout-btn">Logout</button></li>
         </ul>
     </nav>
+    <nav class="navbar">
+        <div class="logo">Dashboard</div>
+        <ul class="nav-links">
+            <li><a href="dashboard.html">Home</a></li>
+            <li><a href="log.html">Log Entries</a></li>
+            <li><a href="analysis.html">Analysis</a></li>
+            <li><a href="admin.html">Admin</a></li>
+        </ul>
+
+        <div class="profile-container">
+            <a href="index.html" class="nav-button" id="loginBtn">Login</a>
+            <div class="profile" id="profileMenu" style="display: none;">
+                <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" />
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-details">
+                        <p class="profile-name">Administrator</p>
+                        <p class="profile-email">email@example.com</p>
+                    </div>
+                    <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
     <main>
         <div class="dashboard-grid">
             <div class="card">
