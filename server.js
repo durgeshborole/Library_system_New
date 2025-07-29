@@ -1678,7 +1678,7 @@ app.post("/api/login/unified", async (req, res) => {
         // }
 
         const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
-        return res.json({ success: true, token, role: 'hod', department: hod.department });
+        return res.json({ success: true, token, role: 'hod', department: hod.department,email: hod.email});
       }
     }
 
