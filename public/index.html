@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,19 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="auth-styles.css" />
 </head>
+
 <body>
     <header class="mit-header">
         <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
         <div class="header-text">
+            <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
             <h1>MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi</h1>
+            <p class="aff-text">
+                Affiliated to Punyashlok Ahilyadevi Holkar Solapur University (PAH) Solapur, Approved by AICTE, New
+                Delhi,
+                Recognised by Govt. Of Maharashtra, DTE Mumbai.<br />
+                <strong>DTE CODE - 06901</strong>
+            </p>
         </div>
     </header>
     <main class="auth-wrapper">
@@ -30,6 +39,7 @@
                 <button type="submit" id="submit-btn" class="submit-btn">Login</button>
             </form>
             <p id="loginMessage" class="message"></p>
+            <p class="auth-link">Forget Password? <a href="password-reset.html">Click here</a></p>
         </div>
     </main>
     <footer class="footer">
@@ -90,7 +100,7 @@
                             localStorage.setItem('adminEmail', result.email);
                             window.location.href = 'dashboard.html';
                         } else if (result.role === 'principal') {
-                             localStorage.setItem('principalEmail', result.email);
+                            localStorage.setItem('principalEmail', result.email);
                             window.location.href = 'principal-dashboard.html';
                         } else if (result.role === 'hod') {
                             localStorage.setItem('hodDepartment', result.department);
@@ -115,7 +125,7 @@
                         });
                         const result = await res.json();
                         if (!res.ok) throw new Error(result.message || "Verification failed.");
-                        
+
                         localStorage.setItem('authToken', result.token);
                         localStorage.setItem('userRole', 'hod');
                         localStorage.setItem('hodDepartment', result.department);
@@ -130,4 +140,5 @@
         });
     </script>
 </body>
+
 </html>

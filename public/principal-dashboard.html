@@ -204,6 +204,7 @@
             gap: 20px;
             padding: 20px 40px;
         }
+
         .logout-btn {
             background-color: #dc3545;
             color: white;
@@ -219,9 +220,16 @@
 
 <body>
     <header class="mit-header">
-        <img src="./images/mit-corer.png" alt="MITCORER Logo" class="mit-logo" />
+        <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
         <div class="header-text">
-            <h1>Principal's Dashboard</h1>
+            <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
+            <h1>MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi</h1>
+            <p class="aff-text">
+                Affiliated to Punyashlok Ahilyadevi Holkar Solapur University (PAH) Solapur, Approved by AICTE, New
+                Delhi,
+                Recognised by Govt. Of Maharashtra, DTE Mumbai.<br />
+                <strong>DTE CODE - 06901</strong>
+            </p>
         </div>
     </header>
     <nav class="navbar">
@@ -344,7 +352,7 @@
                 });
             }
 
-             // Initial data load
+            // Initial data load
             fetchDashboardData();
 
             // Socket.IO connection
@@ -361,7 +369,7 @@
                 window.location.href = 'index.html';
             });
 
-           
+
         });
     </script>
 </body>

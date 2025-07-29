@@ -10,6 +10,21 @@
 </head>
 
 <body>
+
+    <header class="mit-header">
+        <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
+        <div class="header-text">
+            <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
+            <h1>MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi</h1>
+            <p class="aff-text">
+                Affiliated to Punyashlok Ahilyadevi Holkar Solapur University (PAH) Solapur, Approved by AICTE, New
+                Delhi,
+                Recognised by Govt. Of Maharashtra, DTE Mumbai.<br />
+                <strong>DTE CODE - 06901</strong>
+            </p>
+        </div>
+    </header>
+
     <div class="auth-wrapper">
         <div class="auth-container">
             <h2>Update Visitor Details</h2>
@@ -30,26 +45,31 @@
                     <label>Mobile</label>
                     <input type="text" id="mobile" name="mobile" />
                 </div>
-                
+
                 <div class="form-group">
                     <label>New Photo (Optional)</label>
                     <input type="file" id="photo" name="photo" accept="image/*" />
-                    <img id="photoPreview" src="/images/default.jpg" alt="Current Photo" style="max-width: 100px; margin-top: 10px;" />
+                    <img id="photoPreview" src="/images/default.jpg" alt="Current Photo"
+                        style="max-width: 100px; margin-top: 10px;" />
                 </div>
 
                 <div class="form-actions">
                     <button type="submit" class="submit-btn">Update Visitor</button>
-                    <a href="registered.html" class="btn-cancel" style="text-align: center; padding: 10px; background-color: #6c757d;">Cancel</a>
+                    <a href="registered.html" class="btn-cancel"
+                        style="text-align: center; padding: 10px; background-color: #6c757d;">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
+    <footer class="footer">
+        <p>Developed by Durgesh Borole | Raghvendra Gupta | Rahul Baravkar | Bhogesh Allapure</p>
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const barcode = new URLSearchParams(window.location.search).get("barcode");
             const form = document.getElementById("updateForm");
-            
+
             // ✅ Get the admin authentication token
             const token = localStorage.getItem('authToken');
 
@@ -92,7 +112,7 @@
                 e.preventDefault();
 
                 const formData = new FormData(form);
-                
+
                 try {
                     // ✅ Using relative URL and auth headers
                     const res = await fetch(`/api/students/${barcode}`, {
