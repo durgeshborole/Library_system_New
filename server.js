@@ -1105,64 +1105,6 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
   }
 });
 
-// Login page start
-// Register
-// app.post("/api/register", async (req, res) => {
-//   registrationValidationRules(),
-//     validate,
-//   try {
-//     const { email, password } = req.body;
-
-//     const existing = await Admin.findOne({ email });
-//     if (existing) {
-//       return res.status(400).json({ success: false, message: "Email already exists" });
-//     }
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const newAdmin = new Admin({ email, password: hashedPassword });
-//     await newAdmin.save();
-
-//     res.status(201).json({ success: true, message: "Registered successfully" });
-//   } catch (err) {
-//     console.error("❌ Registration error:", err);
-//     res.status(500).json({ success: false, message: "Server error during registration" });
-//   }
-// });
-
-
-
-// Login Admin
-// app.post("/api/login", loginLimiter, async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-//     if (!email || !password) {
-//       return res.status(400).json({ success: false, message: "Email and password are required." });
-//     }
-//     const admin = await Admin.findOne({ email });
-
-//     if (!admin) {
-//       return res.status(401).json({ success: false, message: "Invalid credentials" });
-//     }
-
-//     const match = await bcrypt.compare(password, admin.password);
-//     if (!match) {
-//       return res.status(401).json({ success: false, message: "Invalid credentials" });
-//     }
-
-//     // ✅ Create a JWT
-//     const token = jwt.sign(
-//       { id: admin._id, role: 'admin' },
-//       process.env.JWT_SECRET,
-//       { expiresIn: '1h' } // Token expires in 1 hour
-//     );
-
-//     res.json({ success: true, token }); // ⬅️ Send token to the client
-
-//   } catch (err) {
-//     console.error("❌ Login error:", err);
-//     res.status(500).json({ success: false, message: "Server error during login" });
-//   }
-// });
 
 // Register Admin
 app.post("/api/register", async (req, res) => {
@@ -1182,34 +1124,14 @@ app.post("/api/register", async (req, res) => {
     await newAdmin.save();
 
     res.status(201).json({ success: true, message: "Registered successfully" });
+
   } catch (err) {
-    console.error("❌ Registration error:", err);
+    // ✅ IMPROVED LOGGING: This will now print the specific database or code error.
+    console.error("❌ Registration error:", err); 
     res.status(500).json({ success: false, message: "Server error during registration" });
   }
 });
 
-
-// app.post("/api/register-hod",
-//   authenticateToken,
-//   isAdmin,
-//   hodRegistrationValidationRules(),
-//   validate,
-//   async (req, res) => {
-//     try {
-//       const { email, password, department, mobile, dob } = req.body;
-//       const existingHod = await Hod.findOne({ email });
-//       if (existingHod) {
-//         return res.status(409).json({ message: "An HOD with this email already exists." });
-//       }
-//       const hashedPassword = await bcrypt.hash(password, 10);
-//       const newHod = new Hod({ email, password: hashedPassword, department, mobile, dob });
-//       await newHod.save();
-//       res.status(201).json({ success: true, message: "HOD registered successfully." });
-//     } catch (err) {
-//       console.error("HOD registration error:", err);
-//       res.status(500).json({ message: "Server error during HOD registration." });
-//     }
-//   });
 
 app.post("/api/register-hod", async (req, res) => {
   try {

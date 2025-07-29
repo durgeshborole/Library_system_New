@@ -117,88 +117,45 @@
 </body>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('loginBtn');
-    const profileMenu = document.getElementById('profileMenu');
-    const profileIcon = document.getElementById('profileIcon');
-    const profileDropdown = document.getElementById('profileDropdown');
-    const logoutBtn = document.getElementById('logoutBtn');
+    document.addEventListener('DOMContentLoaded', () => {
+        const loginBtn = document.getElementById('loginBtn');
+        const profileMenu = document.getElementById('profileMenu');
+        const profileIcon = document.getElementById('profileIcon');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const logoutBtn = document.getElementById('logoutBtn');
 
-    const adminEmail = localStorage.getItem('adminEmail');
-    const authToken = localStorage.getItem('authToken');
+        const adminEmail = localStorage.getItem('adminEmail');
+        const authToken = localStorage.getItem('authToken');
 
-    if (authToken && adminEmail) {
-      // User is logged in: hide login button, show profile menu
-      loginBtn.style.display = 'none';
-      profileMenu.style.display = 'block'; // Use 'block' to show the div
-      document.querySelector('.profile-email').textContent = adminEmail;
-    } else {
-      // User is not logged in: show login button, hide profile menu
-      loginBtn.style.display = 'block';
-      profileMenu.style.display = 'none';
-    }
+        if (authToken && adminEmail) {
+            // User is logged in: hide login button, show profile menu
+            loginBtn.style.display = 'none';
+            profileMenu.style.display = 'block'; // Use 'block' to show the div
+            document.querySelector('.profile-email').textContent = adminEmail;
+        } else {
+            // User is not logged in: show login button, hide profile menu
+            loginBtn.style.display = 'block';
+            profileMenu.style.display = 'none';
+        }
 
-    profileIcon.addEventListener('click', (event) => {
-      profileDropdown.classList.toggle('show');
-      event.stopPropagation();
+        profileIcon.addEventListener('click', (event) => {
+            profileDropdown.classList.toggle('show');
+            event.stopPropagation();
+        });
+
+        window.addEventListener('click', () => {
+            if (profileDropdown.classList.contains('show')) {
+                profileDropdown.classList.remove('show');
+            }
+        });
+
+        logoutBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('adminEmail');
+            alert('You have been logged out.');
+            window.location.href = 'index.html';
+        });
     });
-
-    window.addEventListener('click', () => {
-      if (profileDropdown.classList.contains('show')) {
-        profileDropdown.classList.remove('show');
-      }
-    });
-
-    logoutBtn.addEventListener('click', (event) => {
-      event.preventDefault();
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('adminEmail');
-      alert('You have been logged out.');
-      window.location.href = 'index.html';
-    });
-  });
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const loginBtn = document.getElementById('loginBtn');
-    const profileMenu = document.getElementById('profileMenu');
-    const profileIcon = document.getElementById('profileIcon');
-    const profileDropdown = document.getElementById('profileDropdown');
-    const logoutBtn = document.getElementById('logoutBtn');
-
-    const adminEmail = localStorage.getItem('adminEmail');
-    const authToken = localStorage.getItem('authToken');
-
-    if (authToken && adminEmail) {
-      // User is logged in: hide login button, show profile menu
-      loginBtn.style.display = 'none';
-      profileMenu.style.display = 'block'; // Use 'block' to show the div
-      document.querySelector('.profile-email').textContent = adminEmail;
-    } else {
-      // User is not logged in: show login button, hide profile menu
-      loginBtn.style.display = 'block';
-      profileMenu.style.display = 'none';
-    }
-
-    profileIcon.addEventListener('click', (event) => {
-      profileDropdown.classList.toggle('show');
-      event.stopPropagation();
-    });
-
-    window.addEventListener('click', () => {
-      if (profileDropdown.classList.contains('show')) {
-        profileDropdown.classList.remove('show');
-      }
-    });
-
-    logoutBtn.addEventListener('click', (event) => {
-      event.preventDefault();
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('adminEmail');
-      alert('You have been logged out.');
-      window.location.href = 'index.html';
-    });
-  });
-</script>
-
+  </script>
 </html>
