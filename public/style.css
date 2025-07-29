@@ -1,3 +1,14 @@
+/* Add this near the top of style.css */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure all main containers are using box-sizing */
+* {
+  box-sizing: border-box;
+}
+
 #pagination button {
   padding: 8px 16px;
   margin: 0 5px;
@@ -821,4 +832,74 @@ th, td {
 
 .logout-btn:hover {
     background-color: #f1f1f1;
+}
+
+
+/* =================================================================== */
+/* START: RESPONSIVE STYLES FOR MOBILE DEVICES                         */
+/* =================================================================== */
+
+@media (max-width: 768px) {
+
+  /* --- General Layout --- */
+  .mit-header, .navbar, .dashboard-home, .auth-wrapper, .reports-container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  /* --- Header --- */
+  .mit-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  .mit-logo {
+    margin-right: 0;
+  }
+
+  /* --- Navbar --- */
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .nav-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+  .profile-container {
+    margin-left: 0;
+    align-self: flex-start; /* Aligns profile to the left on mobile */
+  }
+
+  /* --- Cards and Tiles --- */
+  .stats-cards, .nav-tiles, .dashboard-grid, .card-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .card {
+    width: 100%; /* Make cards full-width */
+  }
+
+  /* --- Tables (Most Important Fix) --- */
+  /* This makes large tables horizontally scrollable instead of breaking the page */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  
+  /* --- Filters --- */
+  .filters {
+    flex-direction: column;
+    align-items: stretch; /* Make all filter items full-width */
+  }
+  .filter-actions {
+    margin-left: 0;
+    flex-direction: column;
+  }
+
 }
