@@ -199,7 +199,7 @@
     </footer>
 
     <!-- Script -->
-    <script>
+    <!-- <script>
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('authToken');
             const department = localStorage.getItem('hodDepartment');
@@ -301,6 +301,113 @@
                 event.preventDefault();
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('hodEmail');
+                alert('You have been logged out.');
+                window.location.href = 'index.html';
+            });
+        });
+    </script> -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Get user details from localStorage
+            const authToken = localStorage.getItem('authToken');
+            const hodDepartment = localStorage.getItem('hodDepartment');
+            const hodEmail = localStorage.getItem('hodEmail');
+
+            // DOM Elements
+            const loginBtn = document.getElementById('loginBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.getElementById('profileIcon');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const tableBody = document.getElementById('hodLogTableBody');
+
+            // --- Primary Authentication and UI Setup ---
+            if (authToken && hodEmail && hodDepartment) {
+                // User is fully logged in
+                // 1. Configure the UI
+                loginBtn.style.display = 'none';
+                profileMenu.style.display = 'block';
+                document.querySelector('.profile-email').textContent = hodEmail;
+                document.querySelector('.profile-name').textContent = 'HOD'; // Or a dynamic name if available
+
+                // 2. Update page titles with department info
+                document.getElementById('hod-department-title').textContent = `${hodDepartment} Department`;
+                document.querySelector('.hod-welcome h2').textContent = `Welcome, HOD of ${hodDepartment}!`;
+                document.getElementById('logTitle').textContent = `Today's Log for ${hodDepartment}`;
+
+                // 3. Fetch and display dashboard data
+                try {
+                    const res = await fetch('/all-logs');
+                    if (!res.ok) throw new Error(`Failed to fetch logs with status ${res.status}`);
+                    const allLogs = await res.json();
+
+                    const today = new Date().toISOString().split('T')[0];
+                    const deptLogsToday = allLogs.filter(log =>
+                        log.department === hodDepartment && log.date === today
+                    );
+
+                    document.getElementById('totalDeptVisitors').textContent = deptLogsToday.length;
+                    document.getElementById('currentlyInsideDept').textContent =
+                        deptLogsToday.filter(log => !log.exitTime).length;
+
+                    tableBody.innerHTML = ''; // Clear "Loading..." message
+
+                    if (deptLogsToday.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No entries recorded for your department today.</td></tr>`;
+                    } else {
+                        deptLogsToday.forEach(log => {
+                            const entryTime = new Date(log.entryTime).toLocaleTimeString();
+                            const exitTime = log.exitTime ? new Date(log.exitTime).toLocaleTimeString() : 'Inside';
+                            const row = `
+                                <tr>
+                                    <td>${log.name}</td>
+                                    <td>${log.barcode}</td>
+                                    <td>${entryTime}</td>
+                                    <td>${exitTime}</td>
+                                </tr>`;
+                            tableBody.innerHTML += row;
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load dashboard logs:', error);
+                    tableBody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center; color:red;">Failed to load data. Please try again later.</td></tr>';
+                }
+
+            } else {
+                // User is not logged in or session is incomplete
+                console.warn("🔒 Incomplete login data. Redirecting to login page...");
+                // Ensure UI is in the "logged out" state before redirecting
+                loginBtn.style.display = 'block';
+                profileMenu.style.display = 'none';
+                // Redirect to the main login page
+                window.location.href = 'index.html';
+                return; // Stop further script execution
+            }
+
+            // --- Event Listeners (only setup if logged in) ---
+
+            // Profile dropdown toggle
+            profileIcon.addEventListener('click', (event) => {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation(); // Prevent window click from immediately closing it
+            });
+
+            // Close dropdown if clicked outside
+            window.addEventListener('click', () => {
+                if (profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            });
+
+            // Single, consolidated logout button logic
+            logoutBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                // Clear all relevant session data
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
+                localStorage.removeItem('hodDepartment');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
