@@ -199,7 +199,7 @@
     </footer>
 
     <!-- Script -->
-    <!-- <script>
+    <script>
         window.addEventListener('DOMContentLoaded', async () => {
             const token = localStorage.getItem('authToken');
             const department = localStorage.getItem('hodDepartment');
@@ -255,16 +255,52 @@
                 document.getElementById('hodLogTableBody').innerHTML =
                     '<tr><td colspan="4" style="text-align:center; color:red;">Failed to load data.</td></tr>';
             }
+
+            document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.getElementById('profileIcon');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            const hodEmail = localStorage.getItem('hodEmail');
+            const authToken = localStorage.getItem('authToken');
+
+            if (authToken && hodEmail) {
+                // User is logged in: hide login button, show profile menu
+                loginBtn.style.display = 'none';
+                profileMenu.style.display = 'block'; // Use 'block' to show the div
+                document.querySelector('.profile-email').textContent = hodEmail;
+            } else {
+                // User is not logged in: show login button, hide profile menu
+                loginBtn.style.display = 'block';
+                profileMenu.style.display = 'none';
+            }
+
+            profileIcon.addEventListener('click', (event) => {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            window.addEventListener('click', () => {
+                if (profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            });
+
+            logoutBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
+                alert('You have been logged out.');
+                window.location.href = 'index.html';
+            });
+        });
         });
 
-        // Logout button
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('hodDepartment');
-            window.location.href = 'index.html';
-        });
+    
     </script>
-    <script>
+    <!-- <script>
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('loginBtn');
             const profileMenu = document.getElementById('profileMenu');
@@ -307,7 +343,7 @@
         });
     </script> -->
 
-    <script>
+    <!-- <script>
         document.addEventListener('DOMContentLoaded', async () => {
             // Get user details from localStorage
             const authToken = localStorage.getItem('authToken');
@@ -412,7 +448,7 @@
                 window.location.href = 'index.html';
             });
         });
-    </script>
+    </script> -->
 </body>
 
 </html>
