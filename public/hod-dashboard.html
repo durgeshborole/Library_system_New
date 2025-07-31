@@ -1,258 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HOD Dashboard - MITCORER</title>
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    /* Minimal inline tweaks for clarity */
-    .navbar { display: flex; gap: 1rem; padding: 0.5rem 1rem; background:#f5f5f5; align-items:center; }
-    .nav-links { list-style:none; display:flex; gap:0.75rem; margin:0; padding:0; }
-    .nav-links a { text-decoration:none; padding:6px 12px; background:#e0e0e0; border-radius:6px; }
-    .profile-container { margin-left:auto; position:relative; }
-    .profile-dropdown { position:absolute; top:100%; right:0; background:#fff; border:1px solid #ccc; padding:8px; border-radius:6px; display:none; min-width:180px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-    .card { background:#fff; padding:16px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.04); margin-bottom:1rem; }
-    .dashboard { max-width:1100px; margin:1rem auto; display:grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
-    .btn { padding:8px 14px; border:none; border-radius:8px; cursor:pointer; background:#2563eb; color:#fff; }
-    .small { font-size:0.9rem; color:#555; }
-    #stats { display:flex; gap:1rem; flex-wrap:wrap; }
-    .stat-box { flex:1; min-width:160px; background:#f0f8ff; padding:12px; border-radius:8px; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOD Dashboard - MITCORER</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="auth-styles.css" />
+    <style>
+        .dashboard-main {
+            padding: 20px 40px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .hod-welcome {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .hod-welcome h2 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .hod-welcome p {
+            margin: 5px 0 0;
+            color: var(--label-color);
+        }
+
+        .log-section h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .log-table th,
+        .log-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .log-table th {
+            background-color: #ff0000;
+            font-weight: 600;
+        }
+
+        .log-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .log-table tr:hover {
+            background-color: #f0f2f5;
+        }
+
+        .logout-btn {
+            background-color: var(--error-color);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .logout-btn:hover {
+            background-color: #000000;
+        }
+
+        .navbar .nav-links {
+            margin-left: auto;
+        }
+
+        /* Ensure profile container elements display correctly */
+        .profile-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile {
+            position: relative;
+        }
+
+        .profile-icon {
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .profile-dropdown {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            z-index: 100;
+            width: 200px;
+        }
+
+        .profile-dropdown.show {
+            display: block; /* Shown by JavaScript */
+        }
+        
+        .profile-details {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .profile-name, .profile-email {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .profile-email {
+            color: #777;
+            font-size: 0.8rem;
+        }
+
+        .logout-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 12px 15px;
+            box-sizing: border-box;
+            border-radius: 0 0 8px 8px;
+        }
+    </style>
 </head>
 
 <body>
-  <header class="mit-header">
-    <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" style="height:50px;"/>
-    <div class="header-text">
-      <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
-      <h1 style="margin:4px 0; font-size:1.25rem;">HOD Dashboard</h1>
-      <p class="aff-text" style="margin:0;font-size:0.8rem;">
-        MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi — <strong>DTE CODE - 06901</strong>
-      </p>
-    </div>
-  </header>
 
-  <nav class="navbar">
-    <div class="logo"><strong>HOD</strong></div>
-    <ul class="nav-links">
-      <li><a href="#" id="homeLink">Home</a></li>
-      <li><a href="students.html" id="manageStudents">Manage Students</a></li>
-      <li><a href="logs.html" id="viewLogs">Logs</a></li>
-      <li><a href="reports.html" id="reports">Reports</a></li>
-    </ul>
-    <div class="profile-container">
-      <button id="loginBtn" class="btn" style="display:none;">Login</button>
-      <div id="profileMenu" style="display:none; cursor:pointer;">
-        <span id="hodEmail" style="margin-right:8px;"></span>
-        <img src="./images/profile-icon.jpg" alt="Profile" style="width:32px; height:32px; border-radius:50%; vertical-align:middle;" id="profileIcon"/>
-      </div>
-      <div class="profile-dropdown" id="profileDropdown">
-        <div class="profile-details small">
-          <p id="dropdownEmail" style="margin:4px 0; font-weight:600;"></p>
-          <p class="small" style="margin:2px 0;">Role: HOD</p>
+    <header class="mit-header">
+        <img src="./images/mit-corer.jpg" alt="MITCORER Logo" class="mit-logo" />
+        <div class="header-text">
+            <p class="sub-text">Under the aegis of MAEER's MIT Pune</p>
+            <h1>MIT COLLEGE OF RAILWAY ENGINEERING & RESEARCH, Barshi</h1>
+            <p class="aff-text">
+                Affiliated to Punyashlok Ahilyadevi Holkar Solapur University (PAH) Solapur, Approved by AICTE, New
+                Delhi,
+                Recognised by Govt. Of Maharashtra, DTE Mumbai.<br />
+                <strong>DTE CODE - 06901</strong>
+            </p>
         </div>
-        <hr/>
-        <button class="btn" style="width:100%; margin-bottom:6px;" id="logoutBtn">Logout</button>
-      </div>
-    </div>
-  </nav>
+    </header>
 
-  <main class="dashboard">
-    <div class="card">
-      <h3>Welcome, Head of Department</h3>
-      <p class="small">Quick summary of today's activity.</p>
-      <div id="stats">
-        <div class="stat-box">
-          <div><strong>Total Visits Today</strong></div>
-          <div id="totalVisits">—</div>
-        </div>
-        <div class="stat-box">
-          <div><strong>Currently Inside</strong></div>
-          <div id="insideCount">—</div>
-        </div>
-        <div class="stat-box">
-          <div><strong>Peak Hour</strong></div>
-          <div id="peakHour">—</div>
-        </div>
-        <div class="stat-box">
-          <div><strong>Most Frequent Dept</strong></div>
-          <div id="topDept">—</div>
-        </div>
-        <div class="stat-box">
-          <div><strong>Last Entry</strong></div>
-          <div id="lastEntry">—</div>
-        </div>
-      </div>
-      <button class="btn" onclick="refreshStats()" style="margin-top:8px;">Refresh</button>
-    </div>
+    <nav class="navbar">
+        <div id="hod-department-title" class="logo">HOD Dashboard</div>
+        <ul class="nav-links">
+            <li><a href="hod-analysis.html">Analysis</a></li>
+        </ul>
 
-    <div class="card">
-      <h3>Student Search / Quick Actions</h3>
-      <p class="small">Lookup by barcode or name.</p>
-      <input type="text" id="studentSearch" placeholder="Enter name or barcode" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc;"/>
-      <div style="margin-top:8px;">
-        <button class="btn" onclick="searchStudent()">Search</button>
-        <button class="btn" style="background:#10b981;" onclick="goToManage()">Manage Students</button>
-      </div>
-      <div id="searchResult" style="margin-top:12px;"></div>
-    </div>
-
-    <div class="card">
-      <h3>Live Log Updates</h3>
-      <p class="small">Automatically updates when new scan happens.</p>
-      <div id="liveIndicator">Connecting...</div>
-      <div style="margin-top:8px;">
-        <button class="btn" onclick="loadRecentLogs()">View Recent Logs</button>
-      </div>
-      <div id="recentLogs" style="margin-top:12px; max-height:240px; overflow:auto; font-size:0.9rem;"></div>
-    </div>
-
-    <div class="card">
-      <h3>Register New Visitor / Student</h3>
-      <p class="small">Quick add if missing.</p>
-      <button class="btn" onclick="location.href='add-users.html'">Add Student</button>
-    </div>
-  </main>
-
-  <footer class="footer" style="text-align:center; padding:12px; font-size:0.8rem;">
-    <p>HOD Dashboard | Developed by MITCORER Team</p>
-  </footer>
-
-  <script>
-    let socket;
-    const authToken = localStorage.getItem('authToken');
-    const hodEmail = localStorage.getItem('hodEmail') || localStorage.getItem('adminEmail');
-
-    function showLoggedIn() {
-      document.getElementById('loginBtn').style.display = 'none';
-      document.getElementById('profileMenu').style.display = 'inline-flex';
-      document.getElementById('hodEmail').textContent = hodEmail || '';
-      document.getElementById('dropdownEmail').textContent = hodEmail || '';
-    }
-
-    function showLoggedOut() {
-      document.getElementById('loginBtn').style.display = 'inline-block';
-      document.getElementById('profileMenu').style.display = 'none';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      if (authToken && hodEmail) {
-        showLoggedIn();
-      } else {
-        showLoggedOut();
-      }
-
-      // Dropdown toggle
-      document.getElementById('profileIcon').addEventListener('click', (e) => {
-        const dd = document.getElementById('profileDropdown');
-        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
-        e.stopPropagation();
-      });
-      window.addEventListener('click', () => {
-        document.getElementById('profileDropdown').style.display = 'none';
-      });
-
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('hodEmail');
-        alert('Logged out.');
-        location.reload();
-      });
-
-      // Initialize socket for live updates
-      try {
-        socket = io(); // assumes socket.io client script is loaded globally
-        socket.on('connect', () => {
-          document.getElementById('liveIndicator').textContent = 'Live connected'; 
-          socket.on('logUpdate', () => {
-            loadRecentLogs();
-            refreshStats();
-          });
-        });
-        socket.on('disconnect', () => {
-          document.getElementById('liveIndicator').textContent = 'Disconnected';
-        });
-      } catch (e) {
-        document.getElementById('liveIndicator').textContent = 'Socket init failed';
-      }
-
-      // Initial load
-      refreshStats();
-      loadRecentLogs();
-    });
-
-    async function refreshStats() {
-      try {
-        const res = await fetch('/stats');
-        const data = await res.json();
-        document.getElementById('totalVisits').textContent = data.totalVisitorsToday ?? '—';
-        document.getElementById('insideCount').textContent = data.currentlyInside ?? '—';
-        document.getElementById('topDept').textContent = data.mostFrequentDept || '—';
-        document.getElementById('lastEntry').textContent = data.lastEntry || '—';
-
-        // peak hour derived naive: not provided here, placeholder
-        document.getElementById('peakHour').textContent = 'N/A';
-      } catch (e) {
-        console.error('Stats load failed', e);
-      }
-    }
-
-    async function loadRecentLogs() {
-      try {
-        const res = await fetch('/live-log');
-        const logs = await res.json();
-        const container = document.getElementById('recentLogs');
-        container.innerHTML = '';
-        if (!Array.isArray(logs) || logs.length === 0) {
-          container.textContent = 'No recent logs.';
-          return;
-        }
-        logs.slice(0, 10).forEach(log => {
-          const div = document.createElement('div');
-          div.style.borderBottom = '1px solid #eee';
-          div.style.padding = '6px 0';
-          div.innerHTML = `
-            <div><strong>${log.name || 'Unknown'}</strong> (${log.designation || ''})</div>
-            <div class="small">Dept: ${log.department || '-'} | Entry: ${new Date(log.entryTime).toLocaleTimeString()} | Exit: ${log.exitTime ? new Date(log.exitTime).toLocaleTimeString() : 'Inside'}</div>
-          `;
-          container.appendChild(div);
-        });
-      } catch (e) {
-        console.error('Recent logs failed', e);
-        document.getElementById('recentLogs').textContent = 'Failed to load logs.';
-      }
-    }
-
-    async function searchStudent() {
-      const q = document.getElementById('studentSearch').value.trim();
-      if (!q) return alert('Enter name or barcode');
-      try {
-        const res = await fetch(`/students?search=${encodeURIComponent(q)}&page=1&limit=5`);
-        const data = await res.json();
-        const box = document.getElementById('searchResult');
-        if (!data.students || data.students.length === 0) {
-          box.innerHTML = '<div>No matches found.</div>';
-          return;
-        }
-        box.innerHTML = data.students.map(s => {
-          return `
-            <div style="border:1px solid #ddd; padding:6px; border-radius:6px; margin-bottom:4px;">
-              <div><strong>${s.name}</strong> (${s.barcode})</div>
-              <div class="small">Dept: ${s.department} | Year: ${s.year}</div>
-              <div class="small">Email: ${s.email} | Mobile: ${s.mobile}</div>
+        <div class="profile-container">
+            <a href="index.html" class="nav-button" id="loginBtn" style="display: none;">Login</a>
+            
+            <div class="profile" id="profileMenu" style="display: block;">
+                <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" alt="Profile"/>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-details">
+                        <p class="profile-name">HOD</p>
+                        <p class="profile-email">email@example.com</p>
+                    </div>
+                    <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
+                </div>
             </div>
-          `;
-        }).join('');
-      } catch (e) {
-        console.error('Search failed', e);
-      }
-    }
+        </div>
+    </nav>
 
-    function goToManage() {
-      location.href = 'manage-students.html';
-    }
-  </script>
-  <script src="/socket.io/socket.io.js"></script>
+    <main class="dashboard-main">
+        <section id="hodWelcome" class="hod-welcome">
+            <h2>Welcome, HOD!</h2>
+            <p>Here's the real-time library entry overview</p>
+        </section>
+
+        <section class="stats-cards">
+            <div class="card">
+                <h3>Today's Visitors </h3>
+                <p id="totalDeptVisitors">0</p>
+            </div>
+            <div class="card">
+                <h3>Currently Inside </h3>
+                <p id="currentlyInsideDept">0</p>
+            </div>
+        </section>
+
+        <section class="log-section">
+            <h3 id="logTitle">Today's Log</h3>
+            <div class="table-responsive">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Barcode</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hodLogTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align:center;">Loading logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Developed by Durgesh Borole | Raghvendra Gupta | Rahul Baravkar | Bhogesh Allapure</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // --- Get User Details from localStorage ---
+            const authToken = localStorage.getItem('authToken');
+            const hodDepartment = localStorage.getItem('hodDepartment');
+            const hodEmail = localStorage.getItem('hodEmail');
+
+            // --- DOM Elements ---
+            const loginBtn = document.getElementById('loginBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.getElementById('profileIcon');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const tableBody = document.getElementById('hodLogTableBody');
+
+            // --- Primary Authentication & UI Setup ---
+            if (authToken && hodEmail && hodDepartment) {
+                // USER IS LOGGED IN
+                // 1. Configure the UI
+                loginBtn.style.display = 'none';
+                profileMenu.style.display = 'block';
+                document.querySelector('.profile-email').textContent = hodEmail;
+
+                // 2. Update page titles
+                document.getElementById('hod-department-title').textContent = `${hodDepartment} Department`;
+                document.querySelector('.hod-welcome h2').textContent = `Welcome, HOD of ${hodDepartment}!`;
+                document.getElementById('logTitle').textContent = `Today's Log for ${hodDepartment}`;
+
+                // 3. Fetch dashboard data
+                try {
+                    const res = await fetch('/all-logs');
+                    const allLogs = await res.json();
+
+                    const today = new Date().toISOString().split('T')[0];
+                    const deptLogsToday = allLogs.filter(log =>
+                        log.department === hodDepartment && log.date === today
+                    );
+
+                    document.getElementById('totalDeptVisitors').textContent = deptLogsToday.length;
+                    document.getElementById('currentlyInsideDept').textContent =
+                        deptLogsToday.filter(log => !log.exitTime).length;
+
+                    tableBody.innerHTML = ''; // Clear "Loading..."
+
+                    if (deptLogsToday.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No entries for your department today.</td></tr>`;
+                    } else {
+                        deptLogsToday.forEach(log => {
+                            const entryTime = new Date(log.entryTime).toLocaleTimeString();
+                            const exitTime = log.exitTime ? new Date(log.exitTime).toLocaleTimeString() : 'Inside';
+                            tableBody.innerHTML += `
+                                <tr>
+                                    <td>${log.name}</td>
+                                    <td>${log.barcode}</td>
+                                    <td>${entryTime}</td>
+                                    <td>${exitTime}</td>
+                                </tr>`;
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load logs:', error);
+                    tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Failed to load data.</td></tr>';
+                }
+
+            } else {
+                // USER IS NOT LOGGED IN
+                console.warn("🔒 Incomplete login data. Redirecting...");
+                window.location.href = 'index.html';
+                return; // Stop script execution
+            }
+
+            // --- Event Listeners (only setup for logged-in users) ---
+            profileIcon.addEventListener('click', (event) => {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            window.addEventListener('click', () => {
+                if (profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            });
+
+            logoutBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
+                localStorage.removeItem('hodDepartment');
+                alert('You have been logged out.');
+                window.location.href = 'index.html';
+            });
+        });
+    </script>
 </body>
+
 </html>
