@@ -26,6 +26,13 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const { body, validationResult } = require('express-validator');
 
 
+// ✅ ADDED: New Schema to track student academic status
+const AcademicStatusSchema = new mongoose.Schema({
+    barcode: { type: String, required: true, unique: true },
+    isPromoted: { type: Boolean, default: true } // Default to promoted for new students
+});
+const AcademicStatus = mongoose.model("AcademicStatus", AcademicStatusSchema);
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 login requests per windowMs
@@ -81,7 +88,7 @@ const AdminSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   // 👇 Add these fields
- 
+
 });
 
 
@@ -245,6 +252,42 @@ const isHod = (req, res, next) => {
   }
   next();
 };
+
+
+app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: "No CSV file uploaded." });
+    }
+
+    const failedBarcodes = [];
+    const fileBuffer = req.file.buffer.toString('utf-8');
+    
+    // Manually parse CSV to get a simple list of barcodes from the first column
+    const rows = fileBuffer.split('\n').slice(1); // Skip header row
+    for (const row of rows) {
+        const barcode = row.split(',')[0].trim();
+        if (barcode) {
+            failedBarcodes.push(barcode);
+        }
+    }
+    
+    try {
+        // First, reset all students to the 'promoted' state for the new year.
+        await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
+        
+        // Then, specifically mark the students who failed as 'not promoted'.
+        const result = await AcademicStatus.updateMany(
+            { barcode: { $in: failedBarcodes } },
+            { $set: { isPromoted: false } }
+        );
+
+        console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
+        res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
+    } catch (error) {
+        console.error("❌ Error processing failed list:", error);
+        res.status(500).json({ message: "Server error during academic update." });
+    }
+});
 
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
@@ -440,58 +483,32 @@ function decodeBarcode(barcode) {
     department,
     designation
   };
+
+
+
 }
+
+app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+  // ... (your existing logic to save the visitor) ...
+  try {
+    const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+    await newVisitor.save();
+
+    // ✅ ADDED: Create a corresponding academic status record
+    const newStatus = new AcademicStatus({ barcode, isPromoted: true });
+    await newStatus.save();
+
+    res.status(200).json({ message: "✅ Visitor added successfully!" });
+  } catch (err) {
+    // ... (error handling) ...
+  }
+});
+
 
 function getCurrentDateString() {
   const now = new Date();
   return now.toISOString().split('T')[0];
 }
-
-// app.post('/scan', async (req, res) => {
-//   const barcode = req.body?.barcode;
-//   if (!barcode) {
-//     return res.status(400).json({ error: 'Invalid or missing barcode in request body' });
-//   }
-
-//   try {
-//     const visitor = await Visitor.findOne({ barcode });
-
-//     if (!visitor) {
-//       return res.status(404).json({ error: 'Visitor not found in database' });
-//     }
-
-//     const decoded = decodeBarcode(String(barcode));
-//     const today = getCurrentDateString();
-
-//     const existing = await Log.findOne({ barcode, exitTime: null, date: today });
-
-//     if (existing) {
-//       existing.exitTime = new Date();
-//       await existing.save();
-//       return res.status(200).json({ ...existing._doc, status: "exit", photoUrl: visitor.photoUrl });
-//     }
-
-//     const newEntry = new Log({
-//       barcode,
-//       name: visitor.name,
-//       department: decoded.department,
-//       year: decoded.year,
-//       designation: decoded.designation,
-//       date: today,
-//     });
-
-//     const saved = await newEntry.save();
-//     return res.status(200).json({ ...saved._doc, status: "entry", photoUrl: visitor.photoUrl });
-//   } catch (error) {
-//     console.error('Error during scan:', error);
-//     return res.status(500).json({ error: 'Server error' });
-//   }
-
-
-// });
-
-
-
 
 app.post('/scan', async (req, res) => {
   const barcode = req.body?.barcode;
@@ -522,7 +539,7 @@ app.post('/scan', async (req, res) => {
     // After successfully saving, broadcast a signal to all connected clients
     io.emit('logUpdate');
     console.log("📢 Broadcast 'logUpdate' signal to all clients.");
-    
+
     return res.status(200).json({ status: existingLog ? "exit" : "entry", ...savedLog._doc, photoUrl: visitor.photoUrl });
   } catch (error) {
     console.error("Scan error:", error);
@@ -681,7 +698,7 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Notice GET API
-app.get('/notices',authenticateToken,isAdmin, async (req, res) => {
+app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
   try {
     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
     res.status(200).json(notices);
@@ -702,7 +719,7 @@ app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) =>
   }
 });
 
-app.post('/upload-photo', upload.single('photo'),authenticateToken,isAdmin, async (req, res) => {
+app.post('/upload-photo', upload.single('photo'), authenticateToken, isAdmin, async (req, res) => {
   const barcode = req.body.barcode;
   if (!barcode || !req.file) {
     return res.status(400).json({ success: false, message: 'Barcode and photo required.' });
@@ -728,7 +745,7 @@ app.post('/upload-photo', upload.single('photo'),authenticateToken,isAdmin, asyn
   }
 });
 
-app.post('/bulk-upload-photos', upload.array('photos', 500),authenticateToken,isAdmin, async (req, res) => {
+app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, isAdmin, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'No photos uploaded.' });
@@ -1127,7 +1144,7 @@ app.post("/api/register", async (req, res) => {
 
   } catch (err) {
     // ✅ IMPROVED LOGGING: This will now print the specific database or code error.
-    console.error("❌ Registration error:", err); 
+    console.error("❌ Registration error:", err);
     res.status(500).json({ success: false, message: "Server error during registration" });
   }
 });
@@ -1152,7 +1169,7 @@ app.post("/api/register-hod", async (req, res) => {
       email,
       password: hashedPassword,
       department,
-      
+
     });
 
     await newHod.save();
@@ -1283,7 +1300,7 @@ app.post("/api/register-hod", async (req, res) => {
     const { email, password, department } = req.body;
 
     // ✅ Validate fields
-    if (!email || !password || !department ) {
+    if (!email || !password || !department) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
@@ -1363,7 +1380,7 @@ app.post("/api/hod/verify-login", async (req, res) => {
     }
 
     // If OTP is correct, update the account to be verified
-    
+
     // Now, generate the standard login token
     const token = jwt.sign(
       { id: hod._id, role: 'hod', department: hod.department },
@@ -1400,7 +1417,7 @@ app.put("/api/hods/:id", authenticateToken, isAdmin, async (req, res) => {
 
     const updatedHod = await Hod.findByIdAndUpdate(
       id,
-      { email, department,mobile: req.body.mobile, dob: req.body.dob },
+      { email, department },
       { new: true, runValidators: true }
     );
 
@@ -1633,7 +1650,7 @@ app.get("/api/principal/stats", authenticateToken, isPrincipal, async (req, res)
 
 app.post("/api/login/unified", async (req, res) => {
 
-  
+
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required." });
@@ -1680,7 +1697,7 @@ app.post("/api/login/unified", async (req, res) => {
         // }
 
         const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
-        return res.json({ success: true, token, role: 'hod', department: hod.department,email: hod.email});
+        return res.json({ success: true, token, role: 'hod', department: hod.department, email: hod.email });
       }
     }
 
