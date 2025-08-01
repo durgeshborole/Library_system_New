@@ -192,30 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>`;
     }
 
-    // In your main script that handles the barcode scan...
-async function handleScan(barcode) {
-    try {
-        const res = await fetch('/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode })
-        });
-        const result = await res.json();
-
-        if (res.ok) {
-            // Get both the visitor details and the status from the server's response
-            const visitorData = result; 
-            const scanStatus = result.status; // This will be "entry" or "exit"
-
-            // Call the function with both pieces of information
-            displayVisitor(visitorData, scanStatus);
-        } else {
-            // Handle errors
-        }
-    } catch (error) {
-        // Handle errors
-    }
-}
 
     // Updates the log table, handling empty logs
     function updateLiveLog(log) {
