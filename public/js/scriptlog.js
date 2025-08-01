@@ -177,7 +177,9 @@ document.addEventListener("DOMContentLoaded", () => {
             statusMessage = `<h3 class="exit-message">Thanks for coming, visit again!</h3>`;
         }
 
+        
         visitorDetails.innerHTML = `
+        <h2>Visitor Details</h2>
         ${statusMessage}
         <div class="visitor-card">
             <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
