@@ -8,6 +8,19 @@
   <link rel="stylesheet" href="style.css" />
   <!-- <script src="https://cdn.jsdelivr.net/npm/idb@7/build/iife/index-min.js"></script> -->
 </head>
+<style>
+  .welcome-message {
+    text-align: center;
+    color: #28a745;
+    /* Green */
+  }
+
+  .exit-message {
+    text-align: center;
+    color: #007bff;
+    /* Blue */
+  }
+</style>
 
 <body>
 
@@ -26,7 +39,7 @@
   </header>
 
   <!-- Navbar -->
- <nav class="navbar">
+  <nav class="navbar">
     <div class="logo">Entry Logs</div>
     <ul class="nav-links">
       <li><a href="dashboard.html">Home</a></li>
@@ -35,16 +48,16 @@
       <li><a href="admin.html">Admin</a></li>
     </ul>
 
-     <div class="profile-container">
+    <div class="profile-container">
       <a href="index.html" class="nav-button" id="loginBtn">Login</a>
       <div class="profile" id="profileMenu" style="display: none;">
         <img src="./images/profile-icon.jpg" alt="Profile" class="profile-icon" id="profileIcon" />
         <div class="profile-dropdown" id="profileDropdown">
-            <div class="profile-details">
-                <p class="profile-name">Administrator</p>
-                <p class="profile-email">email@example.com</p>
-            </div>
-            <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
+          <div class="profile-details">
+            <p class="profile-name">Administrator</p>
+            <p class="profile-email">email@example.com</p>
+          </div>
+          <a href="#" class="logout-btn" id="logoutBtn">Logout</a>
         </div>
       </div>
     </div>
@@ -77,52 +90,77 @@
     </section>
   </main>
 
-  
+
 
   <script src="./js/scriptlog.js"></script>
 </body>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const loginBtn = document.getElementById('loginBtn');
-        const profileMenu = document.getElementById('profileMenu');
-        const profileIcon = document.getElementById('profileIcon');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const logoutBtn = document.getElementById('logoutBtn');
+  document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('loginBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileIcon = document.getElementById('profileIcon');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-        const adminEmail = localStorage.getItem('adminEmail');
-        const authToken = localStorage.getItem('authToken');
+    const adminEmail = localStorage.getItem('adminEmail');
+    const authToken = localStorage.getItem('authToken');
 
-        if (authToken && adminEmail) {
-            // User is logged in: hide login button, show profile menu
-            loginBtn.style.display = 'none';
-            profileMenu.style.display = 'block'; // Use 'block' to show the div
-            document.querySelector('.profile-email').textContent = adminEmail;
-        } else {
-            // User is not logged in: show login button, hide profile menu
-            loginBtn.style.display = 'block';
-            profileMenu.style.display = 'none';
-        }
+    if (authToken && adminEmail) {
+      // User is logged in: hide login button, show profile menu
+      loginBtn.style.display = 'none';
+      profileMenu.style.display = 'block'; // Use 'block' to show the div
+      document.querySelector('.profile-email').textContent = adminEmail;
+    } else {
+      // User is not logged in: show login button, hide profile menu
+      loginBtn.style.display = 'block';
+      profileMenu.style.display = 'none';
+    }
 
-        profileIcon.addEventListener('click', (event) => {
-            profileDropdown.classList.toggle('show');
-            event.stopPropagation();
-        });
-
-        window.addEventListener('click', () => {
-            if (profileDropdown.classList.contains('show')) {
-                profileDropdown.classList.remove('show');
-            }
-        });
-
-        logoutBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('adminEmail');
-            alert('You have been logged out.');
-            window.location.href = 'index.html';
-        });
+    profileIcon.addEventListener('click', (event) => {
+      profileDropdown.classList.toggle('show');
+      event.stopPropagation();
     });
-  </script>
+
+    window.addEventListener('click', () => {
+      if (profileDropdown.classList.contains('show')) {
+        profileDropdown.classList.remove('show');
+      }
+    });
+
+    logoutBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('adminEmail');
+      alert('You have been logged out.');
+      window.location.href = 'index.html';
+    });
+  });
+
+  // In your main script that handles the barcode scan...
+  async function handleScan(barcode) {
+    try {
+      const res = await fetch('/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode })
+      });
+      const result = await res.json();
+
+      if (res.ok) {
+        // Get both the visitor details and the status from the server's response
+        const visitorData = result;
+        const scanStatus = result.status; // This will be "entry" or "exit"
+
+        // Call the function with both pieces of information
+        displayVisitor(visitorData, scanStatus);
+      } else {
+        // Handle errors
+      }
+    } catch (error) {
+      // Handle errors
+    }
+  }
+</script>
 
 
 </html>
