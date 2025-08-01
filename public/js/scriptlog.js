@@ -6,6 +6,34 @@ document.addEventListener("DOMContentLoaded", () => {
     statusMsg.style.marginTop = "10px";
     barcodeInput.insertAdjacentElement("afterend", statusMsg);
 
+    const bannerMsg = document.createElement("div");
+    bannerMsg.id = "entryExitBanner";
+    bannerMsg.style.cssText = `
+   display: none;
+  margin: 0 0 12px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  background: rgba(0,0,0,0.05);
+  color: #222;
+  position: relative;
+  text-align: center;
+  `;
+    visitorDetails.prepend(bannerMsg);
+
+    function showBannerMessage(text, bgColor) {
+        bannerMsg.textContent = text;
+        bannerMsg.style.background = bgColor;
+        bannerMsg.style.color = "#fff";
+        bannerMsg.style.display = "block";
+
+        clearTimeout(bannerMsg._hideTimeout);
+        bannerMsg._hideTimeout = setTimeout(() => {
+            bannerMsg.style.display = "none";
+        }, 2500);
+    }
+
+
     let barcode = "";
     let typingTimer;
     let db;
@@ -109,53 +137,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-   async function submitBarcode(barcode) {
-    try {
-        const response = await fetch("/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ barcode }),
-        });
+    // Sends barcode to backend and updates UI based on response
+    async function submitBarcode(barcode) {
+        try {
+            const response = await fetch("/scan", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ barcode }),
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (data.error) {
-            statusMsg.textContent = data.error;
-            statusMsg.style.color = "red";
-        } else {
-            displayVisitor(data);
-            fetchLiveLog();
+            if (data.error) {
+                statusMsg.textContent = data.error;
+                statusMsg.style.color = "red";
+            } else {
+                displayVisitor(data);
+                fetchLiveLog();
+                statusMsg.textContent = `${data.status === 'entry' ? '✅ Entry' : '🚪 Exit'} recorded for ${data.name}`;
+                statusMsg.style.color = "green";
+
+
+            }
 
             if (data.status === 'entry') {
-                showTemporaryMessage(`✅ Welcome ${data.name}! Entry recorded.`, "green");
+                showBannerMessage(`✅ Welcome ${data.name}! Entry recorded.`, "#2e7d32"); // green
             } else if (data.status === 'exit') {
-                showTemporaryMessage(`🚪 Thanks for coming, ${data.name}! Visit again.`, "blue");
+                showBannerMessage(`🚪 Thanks for coming, ${data.name}! Visit again.`, "#1565c0"); // blue
             } else {
-                // Fallback if status is unexpected
-                showTemporaryMessage(`ℹ️ ${data.name} scanned.`, "black");
+                showBannerMessage(`${data.name} scanned.`, "#555");
             }
-        }
-    } catch (err) {
-        console.error("Scan error:", err);
-        statusMsg.textContent = "Error connecting to server";
-        statusMsg.style.color = "red";
-        // If the server is unreachable, save the scan for later
-        saveScanOffline(barcode);
-    }
-}
 
-// Helper to show a transient message in the same statusMsg element
-function showTemporaryMessage(text, color) {
-    statusMsg.textContent = text;
-    statusMsg.style.color = color;
-    // Clear after 3 seconds but keep existing logic for offline/online updates
-    setTimeout(() => {
-        // Only clear if it hasn't been overwritten by something else
-        if (statusMsg.textContent === text) {
-            statusMsg.textContent = "";
+        } catch (err) {
+            console.error("Scan error:", err);
+            statusMsg.textContent = "Error connecting to server";
+            statusMsg.style.color = "red";
+            // If the server is unreachable, save the scan for later
+            saveScanOffline(barcode);
         }
-    }, 3000);
-}
+    }
 
     // Fetches current day's log from backend
     async function fetchLiveLog() {
