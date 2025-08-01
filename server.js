@@ -259,34 +259,46 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
 
-    const failedBarcodes = [];
+    const failedNames = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
     
-    // Manually parse CSV to get a simple list of barcodes from the first column
-    const rows = fileBuffer.split('\n').slice(1); // Skip header row
-    for (const row of rows) {
-        const barcode = row.split(',')[0].trim();
-        if (barcode) {
-            failedBarcodes.push(barcode);
-        }
-    }
+    // Read names from the CSV file's 'name' column
+    const stream = require('stream');
+    const readStream = stream.Readable.from(fileBuffer);
     
-    try {
-        // First, reset all students to the 'promoted' state for the new year.
-        await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
-        
-        // Then, specifically mark the students who failed as 'not promoted'.
-        const result = await AcademicStatus.updateMany(
-            { barcode: { $in: failedBarcodes } },
-            { $set: { isPromoted: false } }
-        );
+    readStream
+      .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+      .on('data', (row) => {
+          if (row.name) {
+              failedNames.push(row.name.trim());
+          }
+      })
+      .on('end', async () => {
+          try {
+              // Find the barcodes for the given names
+              const failedVisitors = await Visitor.find({ name: { $in: failedNames } });
+              const failedBarcodes = failedVisitors.map(v => v.barcode);
 
-        console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
-        res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
-    } catch (error) {
-        console.error("❌ Error processing failed list:", error);
-        res.status(500).json({ message: "Server error during academic update." });
-    }
+              if (failedBarcodes.length === 0) {
+                  console.warn("No matching barcodes found for the names provided.");
+              }
+
+              // First, reset all students to the 'promoted' state.
+              await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
+              
+              // Then, specifically mark the students who failed as 'not promoted'.
+              const result = await AcademicStatus.updateMany(
+                  { barcode: { $in: failedBarcodes } },
+                  { $set: { isPromoted: false } }
+              );
+
+              console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
+              res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
+          } catch (error) {
+              console.error("❌ Error processing failed list:", error);
+              res.status(500).json({ message: "Server error during academic update." });
+          }
+      });
 });
 
 // ===================================================================
