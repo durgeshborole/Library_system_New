@@ -136,7 +136,7 @@
                         <th>Department</th>
                         <th>Mobile</th>
                         <th>Date of Birth</th>
-                        <th>Verified</th>
+                        
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -211,7 +211,7 @@
                         <td>${hod.department}</td>
                         <td>${hod.mobile || 'N/A'}</td>
                         <td>${dob}</td>
-                        <td>${hod.isVerified ? 'Yes' : 'No'}</td>
+                        
                         <td>
                             <button class="action-btn update-btn" onclick="openUpdateModal('${hod._id}', '${hod.email}', '${hod.department}', '${hod.mobile || ''}', '${hod.dob ? new Date(hod.dob).toISOString().split('T')[0] : ''}')">Update</button>
                             <button class="action-btn delete-btn" onclick="deleteHod('${hod._id}')">Delete</button>
