@@ -109,34 +109,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // Sends barcode to backend and updates UI based on response
-    async function submitBarcode(barcode) {
-        try {
-            const response = await fetch("/scan", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ barcode }),
-            });
+   async function submitBarcode(barcode) {
+    try {
+        const response = await fetch("/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ barcode }),
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (data.error) {
-                statusMsg.textContent = data.error;
-                statusMsg.style.color = "red";
-            } else {
-                displayVisitor(data);
-                fetchLiveLog();
-                statusMsg.textContent = `${data.status === 'entry' ? '✅ Entry' : '🚪 Exit'} recorded for ${data.name}`;
-                statusMsg.style.color = "green";
-            }
-        } catch (err) {
-            console.error("Scan error:", err);
-            statusMsg.textContent = "Error connecting to server";
+        if (data.error) {
+            statusMsg.textContent = data.error;
             statusMsg.style.color = "red";
-            // If the server is unreachable, save the scan for later
-            saveScanOffline(barcode);
+        } else {
+            displayVisitor(data);
+            fetchLiveLog();
+
+            if (data.status === 'entry') {
+                showTemporaryMessage(`✅ Welcome ${data.name}! Entry recorded.`, "green");
+            } else if (data.status === 'exit') {
+                showTemporaryMessage(`🚪 Thanks for coming, ${data.name}! Visit again.`, "blue");
+            } else {
+                // Fallback if status is unexpected
+                showTemporaryMessage(`ℹ️ ${data.name} scanned.`, "black");
+            }
         }
+    } catch (err) {
+        console.error("Scan error:", err);
+        statusMsg.textContent = "Error connecting to server";
+        statusMsg.style.color = "red";
+        // If the server is unreachable, save the scan for later
+        saveScanOffline(barcode);
     }
+}
+
+// Helper to show a transient message in the same statusMsg element
+function showTemporaryMessage(text, color) {
+    statusMsg.textContent = text;
+    statusMsg.style.color = color;
+    // Clear after 3 seconds but keep existing logic for offline/online updates
+    setTimeout(() => {
+        // Only clear if it hasn't been overwritten by something else
+        if (statusMsg.textContent === text) {
+            statusMsg.textContent = "";
+        }
+    }, 3000);
+}
 
     // Fetches current day's log from backend
     async function fetchLiveLog() {
@@ -151,47 +170,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Displays visitor details including photo
-    // function displayVisitor(visitor) {
-    //     const imageUrl = visitor.photoUrl || "./images/default.jpg";
-    //     visitorDetails.innerHTML = `
-    //   <h2>Visitor Details</h2>
-    //   <div class="visitor-card">
-    //     <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
-    //     <div class="info-side">
-    //       <p><strong>Name:</strong> ${visitor.name}</p>
-    //       <p><strong>Department:</strong> ${visitor.department}</p>
-    //       <p><strong>Year:</strong> ${visitor.year || "-"}</p>
-    //       <p><strong>Designation:</strong> ${visitor.designation}</p>
-    //     </div>
-    //   </div>`;
-    // }
-
-    function displayVisitor(visitor, status) {
+    function displayVisitor(visitor) {
         const imageUrl = visitor.photoUrl || "./images/default.jpg";
-        let statusMessage = '';
-
-        // ✅ ADDED: Check the status to set the correct message
-        if (status === 'entry') {
-            statusMessage = `<h3 class="welcome-message">Welcome, ${visitor.name}!</h3>`;
-        } else if (status === 'exit') {
-            statusMessage = `<h3 class="exit-message">Thanks for coming, visit again!</h3>`;
-        }
-
-        
         visitorDetails.innerHTML = `
-        <h2>Visitor Details</h2>
-        ${statusMessage}
-        <div class="visitor-card">
-            <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
-            <div class="info-side">
-                <p><strong>Name:</strong> ${visitor.name}</p>
-                <p><strong>Department:</strong> ${visitor.department}</p>
-                <p><strong>Year:</strong> ${visitor.year || "-"}</p>
-                <p><strong>Designation:</strong> ${visitor.designation}</p>
-            </div>
-        </div>`;
+      <h2>Visitor Details</h2>
+      <div class="visitor-card">
+        <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
+        <div class="info-side">
+          <p><strong>Name:</strong> ${visitor.name}</p>
+          <p><strong>Department:</strong> ${visitor.department}</p>
+          <p><strong>Year:</strong> ${visitor.year || "-"}</p>
+          <p><strong>Designation:</strong> ${visitor.designation}</p>
+        </div>
+      </div>`;
     }
-
 
     // Updates the log table, handling empty logs
     function updateLiveLog(log) {
