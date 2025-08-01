@@ -1395,12 +1395,12 @@ app.get("/api/hods", authenticateToken, isAdmin, async (req, res) => {
 // UPDATE an HOD by ID (Admin only)
 app.put("/api/hods/:id", authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = params;
     const { email, department } = req.body;
 
     const updatedHod = await Hod.findByIdAndUpdate(
       id,
-      { email, department },
+      { email, department,mobile: req.body.mobile, dob: req.body.dob },
       { new: true, runValidators: true }
     );
 
