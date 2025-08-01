@@ -151,21 +151,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Displays visitor details including photo
-    function displayVisitor(visitor) {
-        const imageUrl = visitor.photoUrl || "./images/default.jpg";
-        visitorDetails.innerHTML = `
-      <h2>Visitor Details</h2>
-      <div class="visitor-card">
-        <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
-        <div class="info-side">
-          <p><strong>Name:</strong> ${visitor.name}</p>
-          <p><strong>Department:</strong> ${visitor.department}</p>
-          <p><strong>Year:</strong> ${visitor.year || "-"}</p>
-          <p><strong>Designation:</strong> ${visitor.designation}</p>
-        </div>
-      </div>`;
-    }
+    // function displayVisitor(visitor) {
+    //     const imageUrl = visitor.photoUrl || "./images/default.jpg";
+    //     visitorDetails.innerHTML = `
+    //   <h2>Visitor Details</h2>
+    //   <div class="visitor-card">
+    //     <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
+    //     <div class="info-side">
+    //       <p><strong>Name:</strong> ${visitor.name}</p>
+    //       <p><strong>Department:</strong> ${visitor.department}</p>
+    //       <p><strong>Year:</strong> ${visitor.year || "-"}</p>
+    //       <p><strong>Designation:</strong> ${visitor.designation}</p>
+    //     </div>
+    //   </div>`;
+    // }
 
+    function displayVisitor(visitor, status) {
+        const imageUrl = visitor.photoUrl || "./images/default.jpg";
+        let statusMessage = '';
+
+        // ✅ ADDED: Check the status to set the correct message
+        if (status === 'entry') {
+            statusMessage = `<h3 class="welcome-message">Welcome, ${visitor.name}!</h3>`;
+        } else if (status === 'exit') {
+            statusMessage = `<h3 class="exit-message">Thanks for coming, visit again!</h3>`;
+        }
+
+        visitorDetails.innerHTML = `
+        ${statusMessage}
+        <div class="visitor-card">
+            <div class="photo-side"><img src="${imageUrl}" alt="Visitor Photo" class="visitor-photo" /></div>
+            <div class="info-side">
+                <p><strong>Name:</strong> ${visitor.name}</p>
+                <p><strong>Department:</strong> ${visitor.department}</p>
+                <p><strong>Year:</strong> ${visitor.year || "-"}</p>
+                <p><strong>Designation:</strong> ${visitor.designation}</p>
+            </div>
+        </div>`;
+    }
     // Updates the log table, handling empty logs
     function updateLiveLog(log) {
         logTable.innerHTML = "";
