@@ -564,21 +564,21 @@ function decodeBarcode(barcode) {
   return { year, department, designation };
 }
 
-app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
-  // ... (your existing logic to save the visitor) ...
-  try {
-    const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
-    await newVisitor.save();
+// app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+//   // ... (your existing logic to save the visitor) ...
+//   try {
+//     const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+//     await newVisitor.save();
 
-    // ✅ ADDED: Create a corresponding academic status record
-    const newStatus = new AcademicStatus({ name, isPromoted: true });
-    await newStatus.save();
+//     // ✅ ADDED: Create a corresponding academic status record
+//     const newStatus = new AcademicStatus({ name, isPromoted: true });
+//     await newStatus.save();
 
-    res.status(200).json({ message: "✅ Visitor added successfully!" });
-  } catch (err) {
-    // ... (error handling) ...
-  }
-});
+//     res.status(200).json({ message: "✅ Visitor added successfully!" });
+//   } catch (err) {
+//     // ... (error handling) ...
+//   }
+// });
 
 
 function getCurrentDateString() {
@@ -1124,7 +1124,7 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
         await newVisitor.save();
         
         // Also create a default academic status record for the new student
-        const newStatus = new AcademicStatus({ barcode, isPromoted: true });
+        const newStatus = new AcademicStatus({ name, isPromoted: true });
         await newStatus.save();
 
         res.status(200).json({ message: "✅ Visitor added successfully!" });
