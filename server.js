@@ -340,6 +340,32 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         });
 });
 
+// ✅ ADDED: A new, one-time route to fix your existing database records
+app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const allVisitors = await Visitor.find({}).select('barcode');
+        const existingStatuses = await AcademicStatus.find({}).select('barcode');
+        const existingBarcodes = new Set(existingStatuses.map(s => s.barcode));
+
+        const missingStatuses = allVisitors.filter(v => !existingBarcodes.has(v.barcode));
+        
+        if (missingStatuses.length === 0) {
+            return res.send("All visitors already have an academic status. No fix needed.");
+        }
+
+        const newStatuses = missingStatuses.map(v => ({
+            barcode: v.barcode,
+            isPromoted: true
+        }));
+
+        await AcademicStatus.insertMany(newStatuses);
+
+        res.send(`Successfully created ${newStatuses.length} missing academic status records. You can now run the promotion update.`);
+
+    } catch (error) {
+        res.status(500).send("An error occurred: " + error.message);
+    }
+});
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
 // ===================================================================
