@@ -564,6 +564,32 @@ function decodeBarcode(barcode) {
   return { year, department, designation };
 }
 
+
+async function decodeBarcodeWithPromotion(barcode) {
+  const decoded = decodeBarcode(barcode);
+
+  if (decoded.designation !== "Student") return decoded;
+
+  if (["Graduated", "Pre-admission"].includes(decoded.year)) {
+    return decoded;
+  }
+
+  const status = await AcademicStatus.findOne({ barcode });
+
+  if (status?.isPromoted === false) {
+    const downgradeMap = {
+      "Second Year": "First Year",
+      "Third Year": "Second Year",
+      "Final Year": "Third Year",
+      "Graduated": "Final Year"
+    };
+    decoded.year = downgradeMap[decoded.year] || decoded.year;
+  }
+
+  return decoded;
+}
+
+
 // app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
 //   // ... (your existing logic to save the visitor) ...
 //   try {
@@ -586,6 +612,44 @@ function getCurrentDateString() {
   return now.toISOString().split('T')[0];
 }
 
+// app.post('/scan', async (req, res) => {
+//   const barcode = req.body?.barcode;
+//   if (!barcode) {
+//     return res.status(400).json({ error: 'Invalid or missing barcode' });
+//   }
+//   try {
+//     const visitor = await Visitor.findOne({ barcode });
+//     if (!visitor) {
+//       return res.status(404).json({ error: 'Visitor not found' });
+//     }
+//     // ... (rest of your scan logic to save the log entry)
+//     const today = new Date().toISOString().split('T')[0];
+//     const existingLog = await Log.findOne({ barcode, exitTime: null, date: today });
+//     let savedLog;
+//     if (existingLog) {
+//       existingLog.exitTime = new Date();
+//       savedLog = await existingLog.save();
+//     } else {
+//       const decoded = decodeBarcode(String(barcode)); // Ensure decodeBarcode function exists
+//       const newEntry = new Log({
+//         barcode, name: visitor.name, department: decoded.department,
+//         year: decoded.year, designation: decoded.designation, date: today,
+//       });
+//       savedLog = await newEntry.save();
+//     }
+
+//     // After successfully saving, broadcast a signal to all connected clients
+//     io.emit('logUpdate');
+//     console.log("📢 Broadcast 'logUpdate' signal to all clients.");
+
+//     return res.status(200).json({ status: existingLog ? "exit" : "entry", ...savedLog._doc, photoUrl: visitor.photoUrl });
+//   } catch (error) {
+//     console.error("Scan error:", error);
+//     return res.status(500).json({ error: 'Server error' });
+//   }
+// });
+// ✅ NEW: A simple endpoint for the frontend to check server connectivity
+
 app.post('/scan', async (req, res) => {
   const barcode = req.body?.barcode;
   if (!barcode) {
@@ -596,36 +660,42 @@ app.post('/scan', async (req, res) => {
     if (!visitor) {
       return res.status(404).json({ error: 'Visitor not found' });
     }
-    // ... (rest of your scan logic to save the log entry)
+
     const today = new Date().toISOString().split('T')[0];
     const existingLog = await Log.findOne({ barcode, exitTime: null, date: today });
+
+    const decoded = await decodeBarcodeWithPromotion(barcode);
     let savedLog;
+
     if (existingLog) {
       existingLog.exitTime = new Date();
       savedLog = await existingLog.save();
     } else {
-      const decoded = decodeBarcode(String(barcode)); // Ensure decodeBarcode function exists
       const newEntry = new Log({
-        barcode, name: visitor.name, department: decoded.department,
-        year: decoded.year, designation: decoded.designation, date: today,
+        barcode,
+        name: visitor.name,
+        department: decoded.department,
+        year: decoded.year,
+        designation: decoded.designation,
+        date: today,
       });
       savedLog = await newEntry.save();
     }
 
-    // After successfully saving, broadcast a signal to all connected clients
     io.emit('logUpdate');
-    console.log("📢 Broadcast 'logUpdate' signal to all clients.");
 
-    return res.status(200).json({ status: existingLog ? "exit" : "entry", ...savedLog._doc, photoUrl: visitor.photoUrl });
+    return res.status(200).json({
+      status: existingLog ? "exit" : "entry",
+      ...savedLog._doc,
+      photoUrl: visitor.photoUrl
+    });
+
   } catch (error) {
     console.error("Scan error:", error);
     return res.status(500).json({ error: 'Server error' });
   }
 });
-// ✅ NEW: A simple endpoint for the frontend to check server connectivity
-app.get("/api/ping", (req, res) => {
-  res.status(200).json({ success: true, message: "pong" });
-});
+
 
 app.get('/live-log', async (req, res) => {
   try {
@@ -859,6 +929,50 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 });
 
 
+// app.get('/students', async (req, res) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 20;
+//   const skip = (page - 1) * limit;
+//   const search = req.query.search?.toLowerCase() || "";
+
+//   try {
+//     const query = search
+//       ? {
+//         $or: [
+//           { name: { $regex: search, $options: "i" } },
+//           { barcode: { $regex: search, $options: "i" } }
+//         ]
+//       }
+//       : {};
+
+//     const total = await Visitor.countDocuments(query);
+//     const visitors = await Visitor.find(query).skip(skip).limit(limit);
+
+//     const students = visitors.map(visitor => {
+//       const decoded = decodeBarcode(visitor.barcode || "");
+//       return {
+//         name: visitor.name || "No Name",
+//         barcode: visitor.barcode || "No Barcode",
+//         photoBase64: visitor.photoUrl || null, // Direct photo from MongoDB
+//         department: decoded.department || "Unknown",
+//         year: decoded.year || "Unknown",
+//         email: visitor.email || "N/A",
+//         mobile: visitor.mobile || "N/A"
+//       };
+//     });
+
+//     res.status(200).json({
+//       students,
+//       totalPages: Math.ceil(total / limit),
+//       currentPage: page
+//     });
+//   } catch (err) {
+//     console.error("❌ Error in /students:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
@@ -868,28 +982,28 @@ app.get('/students', async (req, res) => {
   try {
     const query = search
       ? {
-        $or: [
-          { name: { $regex: search, $options: "i" } },
-          { barcode: { $regex: search, $options: "i" } }
-        ]
-      }
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { barcode: { $regex: search, $options: "i" } }
+          ]
+        }
       : {};
 
     const total = await Visitor.countDocuments(query);
     const visitors = await Visitor.find(query).skip(skip).limit(limit);
 
-    const students = visitors.map(visitor => {
-      const decoded = decodeBarcode(visitor.barcode || "");
+    const students = await Promise.all(visitors.map(async (visitor) => {
+      const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
       return {
         name: visitor.name || "No Name",
         barcode: visitor.barcode || "No Barcode",
-        photoBase64: visitor.photoUrl || null, // Direct photo from MongoDB
+        photoBase64: visitor.photoUrl || null,
         department: decoded.department || "Unknown",
         year: decoded.year || "Unknown",
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
-    });
+    }));
 
     res.status(200).json({
       students,
