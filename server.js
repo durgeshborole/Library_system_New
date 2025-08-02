@@ -652,31 +652,27 @@ function decodeBarcode(barcode) {
     designation = "Faculty";
     const departmentCode = barcode.charAt(3);
     department = departments[departmentCode] || "Unknown";
-    year = "N/A";
 
   } else if (designationPrefix === 'L') {
     designation = "Librarian";
     department = "Library";
-    year = "N/A";
 
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
 
-    const departmentCode = barcode.charAt(2);
-    const enrollTypeCode = barcode.slice(3, 5); // 🔁 slice(3, 5) must be '10' or '20'
+    const departmentCode = barcode.charAt(2);         // '4' = ENTC
+    const enrollTypeCode = barcode.slice(3, 5);       // '10' or '20'
+
     department = departments[departmentCode] || "Unknown";
 
-    if (enrollTypeCode === "10") {
-      year = "First Year";
-    } else if (enrollTypeCode === "20") {
-      year = "Second Year";
-    } else {
-      year = "Unknown Enrollment Type";
-    }
+    if (enrollTypeCode === "10") year = "First Year";
+    else if (enrollTypeCode === "20") year = "Second Year";
+    else year = "Unknown Enrollment Type";
   }
 
   return { year, department, designation };
 }
+
 
 async function decodeBarcodeWithPromotion(barcode) {
   const decoded = decodeBarcode(barcode);
@@ -705,6 +701,7 @@ async function decodeBarcodeWithPromotion(barcode) {
 
   return decoded;
 }
+
 
 
 
