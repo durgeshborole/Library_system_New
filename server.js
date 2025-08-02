@@ -480,7 +480,93 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 
 // }
 
-function decodeBarcode(barcode) {
+// function decodeBarcode(barcode) {
+//   // --- Default values and basic validation ---
+//   const unknownResult = {
+//     year: "N/A",
+//     department: "Unknown",
+//     designation: "Unknown"
+//   };
+
+//   if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
+//     return unknownResult;
+//   }
+
+//   // --- Data Mappings ---
+//   const departments = {
+//     '1': "Civil Engineering",
+//     '2': "Mechanical Engineering",
+//     '3': "Computer Science",
+//     '4': "Electronics and Telecommunication",
+//     '5': "Electronics and Computer",
+//     'B': "Library",
+//   };
+
+//   // --- Extract Information based on Designation ---
+//   const designationPrefix = barcode.charAt(0).toUpperCase();
+//   let designation = "Unknown";
+//   let department = "Unknown";
+//   let year = "N/A";
+
+//   // Check for Faculty
+//   if (designationPrefix === 'F') {
+//     designation = "Faculty";
+//     const departmentCode = barcode.charAt(3);
+//     department = departments[departmentCode] || "Unknown";
+//     year = "N/A";
+
+//   // Check for Librarian
+//   } else if (designationPrefix === 'L') {
+//     designation = "Librarian";
+//     department = "Library";
+//     year = "N/A";
+
+//   // Check for Student
+//   } else if (!isNaN(parseInt(designationPrefix, 10))) {
+//     designation = "Student";
+
+//     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
+//     const departmentCode = barcode.charAt(2);
+//     const enrollTypeCode = barcode.slice(3, 5);
+
+//     department = departments[departmentCode] || "Unknown";
+
+//     // --- Automatic Year Calculation ---
+//     const now = new Date();
+//     let currentAcademicYear = now.getFullYear();
+//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
+
+//     // The academic year starts in July. If it's before July,
+//     // we are still in the previous academic year.
+//     if (currentMonth < 6) {
+//       currentAcademicYear--;
+//     }
+
+//     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
+//     const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
+
+//     if (enrollTypeCode === "10") { // Regular 4-year program
+//       if (yearsSinceAdmission < 0) year = "Pre-admission";
+//       else if (yearsSinceAdmission === 0) year = "First Year";
+//       else if (yearsSinceAdmission === 1) year = "Second Year";
+//       else if (yearsSinceAdmission === 2) year = "Third Year";
+//       else if (yearsSinceAdmission === 3) year = "Final Year";
+//       else year = "Graduated";
+//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+//       if (yearsSinceAdmission < 0) year = "Pre-admission";
+//       else if (yearsSinceAdmission === 0) year = "Second Year";
+//       else if (yearsSinceAdmission === 1) year = "Third Year";
+//       else if (yearsSinceAdmission === 2) year = "Final Year";
+//       else year = "Graduated";
+//     } else {
+//       year = "Unknown Enrollment Type";
+//     }
+//   }
+
+//   return { year, department, designation };
+// }
+
+async function decodeBarcode(barcode) {
   // --- Default values and basic validation ---
   const unknownResult = {
     year: "N/A",
@@ -508,43 +594,40 @@ function decodeBarcode(barcode) {
   let department = "Unknown";
   let year = "N/A";
 
-  // Check for Faculty
-  if (designationPrefix === 'F') {
-    designation = "Faculty";
-    const departmentCode = barcode.charAt(3);
-    department = departments[departmentCode] || "Unknown";
-    year = "N/A";
-
-  // Check for Librarian
-  } else if (designationPrefix === 'L') {
-    designation = "Librarian";
-    department = "Library";
+  // Check for Faculty or Librarian
+  if (designationPrefix === 'F' || designationPrefix === 'L') {
+    designation = designationPrefix === 'F' ? "Faculty" : "Librarian";
+    department = designationPrefix === 'F' ? (departments[barcode.charAt(3)] || "Unknown") : "Library";
     year = "N/A";
 
   // Check for Student
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
-
-    const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
+    const admissionYearCode = barcode.slice(0, 2); // e.g., "24" for 2024
     const departmentCode = barcode.charAt(2);
     const enrollTypeCode = barcode.slice(3, 5);
-
     department = departments[departmentCode] || "Unknown";
-
-    // --- Automatic Year Calculation ---
+    
+    // --- Dynamic Year Calculation with Promotion Check ---
     const now = new Date();
     let currentAcademicYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0 = January, 6 = July
-
-    // The academic year starts in July. If it's before July,
-    // we are still in the previous academic year.
-    if (currentMonth < 6) {
+    // Academic year starts in July. If it's before July, we are in the previous academic year.
+    if (now.getMonth() < 6) { 
       currentAcademicYear--;
     }
 
     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
-    const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
+    let yearsSinceAdmission = currentAcademicYear - admissionFullYear;
 
+    // Check the student's promotion status from the database
+    const academicStatus = await AcademicStatus.findOne({ barcode });
+    
+    // If the student is found and is marked as NOT promoted, hold them back one year
+    if (academicStatus && !academicStatus.isPromoted) {
+        yearsSinceAdmission--; 
+    }
+
+    // Determine the year based on the final calculated duration
     if (enrollTypeCode === "10") { // Regular 4-year program
       if (yearsSinceAdmission < 0) year = "Pre-admission";
       else if (yearsSinceAdmission === 0) year = "First Year";
@@ -1140,7 +1223,89 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
     }
 });
 
-// ✅ THIS ROUTE IS UPDATED WITH ADVANCED LOGGING FOR THE CSV PARSER
+// // ✅ THIS ROUTE IS UPDATED WITH ADVANCED LOGGING FOR THE CSV PARSER
+// app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
+//   try {
+//     const csvFile = req.files["csv"]?.[0];
+//     const photoFiles = req.files["photos"] || [];
+
+//     if (!csvFile) {
+//       return res.status(400).json({ success: false, message: "CSV file is missing." });
+//     }
+
+//     const photoMap = {};
+//     if (photoFiles.length > 0) {
+//       photoFiles.forEach(file => {
+//         const key = path.parse(file.originalname).name.trim().toLowerCase();
+//         photoMap[key] = `data:${file.mimetype};base64,${fs.readFileSync(file.path).toString('base64')}`;
+//       });
+//     }
+
+//     const recordsToInsert = [];
+
+//     console.log("[Bulk Upload] Starting to process CSV file (photos are optional)...");
+
+//     fs.createReadStream(csvFile.path)
+//       .pipe(csv({
+//         trim: true,
+//         bom: true,
+//         mapHeaders: ({ header }) => header.trim().toLowerCase()
+//       }))
+//       .on("error", (error) => {
+//         console.error("❌ CSV Parsing Error:", error.message);
+//       })
+//       .on("headers", (headers) => {
+//         console.log("[Bulk Upload] ✅ CSV Headers Found and Normalized:", headers);
+//       })
+//       .on("data", (row) => {
+//         const { barcode, name, mobile, email } = row;
+
+//         // ✅ NEW LOGIC: First, validate that the only two required fields exist.
+//         if (!barcode || !name) {
+//           console.warn(`[Bulk Upload] ⚠️ SKIPPING ROW: The 'barcode' and 'name' columns are both required. Found barcode: '${barcode}', name: '${name}'.`);
+//           return; // Stop processing this row and move to the next.
+//         }
+
+//         // If validation passes, find the photo (it's optional).
+//         const photoUrl = photoMap[barcode.toLowerCase()] || null;
+
+//         if (!photoUrl) {
+//           console.info(`[Bulk Upload] ℹ️ INFO: No photo found for barcode '${barcode}'. Adding visitor without photo.`);
+//         }
+
+//         // ✅ ALWAYS add the record to our list if barcode and name are present.
+//         recordsToInsert.push({
+//           barcode,
+//           name,
+//           mobile: mobile || '',
+//           email: email || '',
+//           photoUrl: photoUrl
+//         });
+//       })
+//       .on("end", async () => {
+//         console.log(`[Bulk Upload] Finished reading CSV file. Found ${recordsToInsert.length} valid records to insert.`);
+//         try {
+//           if (recordsToInsert.length > 0) {
+//             // Using insertMany to add all collected records at once.
+//             const result = await Visitor.insertMany(recordsToInsert, { ordered: false });
+//             console.log(`[Bulk Upload] ✅ Successfully inserted ${result.length} records into the database.`);
+//             res.status(200).json({ success: true, message: `Successfully added ${result.length} visitors.` });
+//           } else {
+//             console.log("[Bulk Upload] ⚠️ No valid records were found to insert.");
+//             res.status(200).json({ success: true, message: "0 visitors were added. Please check the server console for warnings." });
+//           }
+//         } catch (dbError) {
+//           console.error("❌ Database error during bulk insert:", dbError);
+//           res.status(500).json({ success: false, message: "A database error occurred during the bulk insert." });
+//         }
+//       });
+
+//   } catch (err) {
+//     console.error("❌ General error in bulk upload:", err);
+//     res.status(500).json({ success: false, message: "A server error occurred." });
+//   }
+// });
+
 app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
   try {
     const csvFile = req.files["csv"]?.[0];
@@ -1160,37 +1325,22 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
 
     const recordsToInsert = [];
 
-    console.log("[Bulk Upload] Starting to process CSV file (photos are optional)...");
-
     fs.createReadStream(csvFile.path)
       .pipe(csv({
         trim: true,
         bom: true,
         mapHeaders: ({ header }) => header.trim().toLowerCase()
       }))
-      .on("error", (error) => {
-        console.error("❌ CSV Parsing Error:", error.message);
-      })
-      .on("headers", (headers) => {
-        console.log("[Bulk Upload] ✅ CSV Headers Found and Normalized:", headers);
-      })
       .on("data", (row) => {
         const { barcode, name, mobile, email } = row;
-
-        // ✅ NEW LOGIC: First, validate that the only two required fields exist.
         if (!barcode || !name) {
-          console.warn(`[Bulk Upload] ⚠️ SKIPPING ROW: The 'barcode' and 'name' columns are both required. Found barcode: '${barcode}', name: '${name}'.`);
-          return; // Stop processing this row and move to the next.
+          console.warn(`[Bulk Upload] ⚠️ SKIPPING ROW: The 'barcode' and 'name' columns are required. Found barcode: '${barcode}', name: '${name}'.`);
+          return;
         }
-
-        // If validation passes, find the photo (it's optional).
         const photoUrl = photoMap[barcode.toLowerCase()] || null;
-
         if (!photoUrl) {
           console.info(`[Bulk Upload] ℹ️ INFO: No photo found for barcode '${barcode}'. Adding visitor without photo.`);
         }
-
-        // ✅ ALWAYS add the record to our list if barcode and name are present.
         recordsToInsert.push({
           barcode,
           name,
@@ -1200,15 +1350,28 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
         });
       })
       .on("end", async () => {
-        console.log(`[Bulk Upload] Finished reading CSV file. Found ${recordsToInsert.length} valid records to insert.`);
         try {
           if (recordsToInsert.length > 0) {
-            // Using insertMany to add all collected records at once.
-            const result = await Visitor.insertMany(recordsToInsert, { ordered: false });
-            console.log(`[Bulk Upload] ✅ Successfully inserted ${result.length} records into the database.`);
-            res.status(200).json({ success: true, message: `Successfully added ${result.length} visitors.` });
+            // Step 1: Insert all the new visitors
+            const result = await Visitor.insertMany(recordsToInsert, { ordered: false }).catch(e => {
+                if (e.code !== 11000) throw e; // Ignore duplicate visitor errors, but throw others
+                console.warn("Some visitors were duplicates and were skipped.");
+            });
+            const insertedCount = result ? result.length : recordsToInsert.length;
+            
+            // ✅ ADDED: Step 2: Create the AcademicStatus record for each new visitor
+            const statusRecords = recordsToInsert.map(v => ({
+                barcode: v.barcode,
+                isPromoted: true // Default to promoted
+            }));
+            await AcademicStatus.insertMany(statusRecords, { ordered: false }).catch(e => {
+                if (e.code !== 11000) throw e; // Ignore duplicate status errors
+                console.warn("Some academic status records already existed and were skipped.");
+            });
+
+            console.log(`[Bulk Upload] ✅ Successfully processed ${insertedCount} new visitors and their academic statuses.`);
+            res.status(200).json({ success: true, message: `Successfully added ${insertedCount} visitors.` });
           } else {
-            console.log("[Bulk Upload] ⚠️ No valid records were found to insert.");
             res.status(200).json({ success: true, message: "0 visitors were added. Please check the server console for warnings." });
           }
         } catch (dbError) {
@@ -1216,13 +1379,11 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
           res.status(500).json({ success: false, message: "A database error occurred during the bulk insert." });
         }
       });
-
   } catch (err) {
     console.error("❌ General error in bulk upload:", err);
     res.status(500).json({ success: false, message: "A server error occurred." });
   }
 });
-
 
 // Register Admin
 app.post("/api/register", async (req, res) => {
