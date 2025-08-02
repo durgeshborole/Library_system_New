@@ -258,133 +258,153 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
     if (!req.file) {
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
-
-    const failedNames = [];
+    const failedBarcodes = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
     
-    // Read names from the CSV file's 'name' column
-    const stream = require('stream');
-    const readStream = stream.Readable.from(fileBuffer);
-    
-    readStream
-      .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
-      .on('data', (row) => {
-          if (row.name) {
-              failedNames.push(row.name.trim());
-          }
-      })
-      .on('end', async () => {
-          try {
-              // Find the barcodes for the given names
-              const failedVisitors = await Visitor.find({ name: { $in: failedNames } });
-              const failedBarcodes = failedVisitors.map(v => v.barcode);
+    // Create a readable stream from the buffer to use the csv-parser
+    const readableStream = require('stream').Readable.from(fileBuffer);
 
-              if (failedBarcodes.length === 0) {
-                  console.warn("No matching barcodes found for the names provided.");
-              }
+    readableStream
+        .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+        .on('data', (row) => {
+            if (row.barcode) {
+                failedBarcodes.push(row.barcode);
+            }
+        })
+        .on('end', async () => {
+            try {
+                // First, reset all students to the 'promoted' state for the new year.
+                await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
+                
+                // Then, specifically mark the students from the CSV as 'not promoted'.
+                const result = await AcademicStatus.updateMany(
+                    { barcode: { $in: failedBarcodes } },
+                    { $set: { isPromoted: false } }
+                );
 
-              // First, reset all students to the 'promoted' state.
-              await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
-              
-              // Then, specifically mark the students who failed as 'not promoted'.
-              const result = await AcademicStatus.updateMany(
-                  { barcode: { $in: failedBarcodes } },
-                  { $set: { isPromoted: false } }
-              );
-
-              console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
-              res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
-          } catch (error) {
-              console.error("❌ Error processing failed list:", error);
-              res.status(500).json({ message: "Server error during academic update." });
-          }
-      });
+                res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
+            } catch (error) {
+                res.status(500).json({ message: "Server error during academic update." });
+            }
+        });
 });
+
 
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
 // ===================================================================
 
 // function decodeBarcode(barcode) {
-//   if (!barcode || barcode.length < 5) {
-//     return {
-//       year: "Unknown",
-//       department: "Unknown",
-//       designation: "Unknown"
-//     };
+//   // --- Default values and basic validation ---
+//   const unknownResult = {
+//     year: "N/A",
+//     department: "Unknown",
+//     designation: "Unknown"
+//   };
+
+//   if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
+//     return unknownResult;
 //   }
 
-//   const admissionYearCode = barcode.slice(0, 2);  // e.g., "23"
-//   const enrollYearCode = barcode.slice(3, 5);      // "10" (Regular) or "20" (DSY)
-//   const designationCode = barcode.charAt(0);       // "2", "F", "L"
-
+//   // --- Data Mappings ---
 //   const departments = {
 //     '1': "Civil",
 //     '2': "Mechanical",
 //     '3': "Computer Science",
-//     '4': "Electronics and Communication",
+//     '4': "Electronics and Telecommunication",
 //     '5': "Electronics and Computer",
 //     'B': "Library",
 //   };
 
+//   // --- Extract Information based on Designation ---
+//   const designationPrefix = barcode.charAt(0).toUpperCase();
 //   let designation = "Unknown";
 //   let department = "Unknown";
 //   let year = "N/A";
 
-//   if (designationCode === 'F') {
+//   // Check for Faculty
+//   if (designationPrefix === 'F') {
 //     designation = "Faculty";
-//     department = departments[barcode.charAt(3)] || "Unknown";  // Faculty dept at index 3
-//   } else if (designationCode === 'L') {
+//     const departmentCode = barcode.charAt(3);
+//     department = departments[departmentCode] || "Unknown";
+//     // Faculty members do not have a "year of study"
+//     year = "N/A";
+
+//     // Check for Librarian
+//   } else if (designationPrefix === 'L') {
 //     designation = "Librarian";
-//     department = "Library"; // fixed for librarian
-//   } else if (designationCode === '2') {
+//     department = "Library"; // Librarians belong to the Library department
+//     year = "N/A";
+
+//     // Check for Student (assuming student barcodes start with a number)
+//   } else if (!isNaN(parseInt(designationPrefix, 10))) {
 //     designation = "Student";
-//     department = departments[barcode.charAt(2)] || "Unknown";  // Student dept at index 2
+
+//     // --- Student-Specific Decoding ---
+//     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
+//     const departmentCode = barcode.charAt(2);      // e.g., "3"
+//     const enrollTypeCode = barcode.slice(3, 5);    // e.g., "10" or "20"
+
+//     department = departments[departmentCode] || "Unknown";
+
+//     // --- Automatic Year Calculation ---
+//     // This section makes the system "automatic". It compares the student's
+//     // admission year with the current academic year to determine their level.
 
 //     const now = new Date();
-//     let currentYear = now.getFullYear();
-//     const currentMonth = now.getMonth(); // 0 = Jan, 6 = July
+//     let currentAcademicYear = now.getFullYear();
+//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
 
-//     // Academic year starts from July
+//     // The academic year starts in July. If the current month is before July,
+//     // we are still in the previous academic year.
 //     if (currentMonth < 6) {
-//       currentYear--; // Before July, still in previous academic year
+//       currentAcademicYear--;
 //     }
 
-//     const admissionFullYear = 2000 + parseInt(admissionYearCode);
-//     const diff = currentYear - admissionFullYear;
+//     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
+//     const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
 
-//     if (enrollYearCode === "10") {
-//       if (diff === 0) {
-//         year = "First";
-//       } else if (diff === 1) {
-//         year = "Second";
-//       } else if (diff === 2) {
-//         year = "Third";
-//       } else if (diff === 3) {
-//         year = "Final";
+//     // Determine year of study based on enrollment type
+//     if (enrollTypeCode === "10") { // Regular 4-year program
+//       if (yearsSinceAdmission < 0) {
+//         year = "Pre-admission"; // Admission year is in the future
+//       } else if (yearsSinceAdmission === 0) {
+//         year = "First Year";
+//       } else if (yearsSinceAdmission === 1) {
+//         year = "Second Year";
+//       } else if (yearsSinceAdmission === 2) {
+//         year = "Third Year";
+//       } else if (yearsSinceAdmission === 3) {
+//         year = "Final Year";
 //       } else {
 //         year = "Graduated";
 //       }
-//     } else if (enrollYearCode === "20") {
-//       if (diff === 0) {
-//         year = "Second";
-//       } else if (diff === 1) {
-//         year = "Third";
-//       } else if (diff === 2) {
-//         year = "Final";
+//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY) 3-year program
+//       if (yearsSinceAdmission < 0) {
+//         year = "Pre-admission";
+//       } else if (yearsSinceAdmission === 0) {
+//         year = "Second Year"; // DSY students start in the second year
+//       } else if (yearsSinceAdmission === 1) {
+//         year = "Third Year";
+//       } else if (yearsSinceAdmission === 2) {
+//         year = "Final Year";
 //       } else {
 //         year = "Graduated";
 //       }
 //     } else {
-//       year = "Unknown";
+//       year = "Unknown Enrollment Type";
 //     }
 //   }
 
+//   // Return the final decoded information
 //   return {
 //     year,
 //     department,
 //     designation
 //   };
+
+
+
 // }
 
 function decodeBarcode(barcode) {
@@ -401,8 +421,8 @@ function decodeBarcode(barcode) {
 
   // --- Data Mappings ---
   const departments = {
-    '1': "Civil",
-    '2': "Mechanical",
+    '1': "Civil Engineering",
+    '2': "Mechanical Engineering",
     '3': "Computer Science",
     '4': "Electronics and Telecommunication",
     '5': "Electronics and Computer",
@@ -420,35 +440,30 @@ function decodeBarcode(barcode) {
     designation = "Faculty";
     const departmentCode = barcode.charAt(3);
     department = departments[departmentCode] || "Unknown";
-    // Faculty members do not have a "year of study"
     year = "N/A";
 
-    // Check for Librarian
+  // Check for Librarian
   } else if (designationPrefix === 'L') {
     designation = "Librarian";
-    department = "Library"; // Librarians belong to the Library department
+    department = "Library";
     year = "N/A";
 
-    // Check for Student (assuming student barcodes start with a number)
+  // Check for Student
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
 
-    // --- Student-Specific Decoding ---
     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
-    const departmentCode = barcode.charAt(2);      // e.g., "3"
-    const enrollTypeCode = barcode.slice(3, 5);    // e.g., "10" or "20"
+    const departmentCode = barcode.charAt(2);
+    const enrollTypeCode = barcode.slice(3, 5);
 
     department = departments[departmentCode] || "Unknown";
 
     // --- Automatic Year Calculation ---
-    // This section makes the system "automatic". It compares the student's
-    // admission year with the current academic year to determine their level.
-
     const now = new Date();
     let currentAcademicYear = now.getFullYear();
     const currentMonth = now.getMonth(); // 0 = January, 6 = July
 
-    // The academic year starts in July. If the current month is before July,
+    // The academic year starts in July. If it's before July,
     // we are still in the previous academic year.
     if (currentMonth < 6) {
       currentAcademicYear--;
@@ -457,47 +472,25 @@ function decodeBarcode(barcode) {
     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
     const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
 
-    // Determine year of study based on enrollment type
     if (enrollTypeCode === "10") { // Regular 4-year program
-      if (yearsSinceAdmission < 0) {
-        year = "Pre-admission"; // Admission year is in the future
-      } else if (yearsSinceAdmission === 0) {
-        year = "First Year";
-      } else if (yearsSinceAdmission === 1) {
-        year = "Second Year";
-      } else if (yearsSinceAdmission === 2) {
-        year = "Third Year";
-      } else if (yearsSinceAdmission === 3) {
-        year = "Final Year";
-      } else {
-        year = "Graduated";
-      }
-    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY) 3-year program
-      if (yearsSinceAdmission < 0) {
-        year = "Pre-admission";
-      } else if (yearsSinceAdmission === 0) {
-        year = "Second Year"; // DSY students start in the second year
-      } else if (yearsSinceAdmission === 1) {
-        year = "Third Year";
-      } else if (yearsSinceAdmission === 2) {
-        year = "Final Year";
-      } else {
-        year = "Graduated";
-      }
+      if (yearsSinceAdmission < 0) year = "Pre-admission";
+      else if (yearsSinceAdmission === 0) year = "First Year";
+      else if (yearsSinceAdmission === 1) year = "Second Year";
+      else if (yearsSinceAdmission === 2) year = "Third Year";
+      else if (yearsSinceAdmission === 3) year = "Final Year";
+      else year = "Graduated";
+    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+      if (yearsSinceAdmission < 0) year = "Pre-admission";
+      else if (yearsSinceAdmission === 0) year = "Second Year";
+      else if (yearsSinceAdmission === 1) year = "Third Year";
+      else if (yearsSinceAdmission === 2) year = "Final Year";
+      else year = "Graduated";
     } else {
       year = "Unknown Enrollment Type";
     }
   }
 
-  // Return the final decoded information
-  return {
-    year,
-    department,
-    designation
-  };
-
-
-
+  return { year, department, designation };
 }
 
 app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
@@ -1033,23 +1026,46 @@ app.get('/admin/monthly-awards', async (req, res) => {
   }
 });
 
-app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
-  const { barcode, name, mobile, email } = req.body;
-  const file = req.file;
-  if (!barcode || !name || !file) {
-    return res.status(400).json({ message: "Barcode, name, and photo are required." });
-  }
-  try {
-    const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-    const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
-    await newVisitor.save();
-    res.status(200).json({ message: "✅ Visitor added successfully!" });
-  } catch (err) {
-    console.error("Error saving visitor:", err);
-    res.status(500).json({ message: "❌ Error saving visitor to database." });
-  }
-});
+// app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+//   const { barcode, name, mobile, email } = req.body;
+//   const file = req.file;
+//   if (!barcode || !name || !file) {
+//     return res.status(400).json({ message: "Barcode, name, and photo are required." });
+//   }
+//   try {
+//     const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+//     const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+//     await newVisitor.save();
+//     res.status(200).json({ message: "✅ Visitor added successfully!" });
+//   } catch (err) {
+//     console.error("Error saving visitor:", err);
+//     res.status(500).json({ message: "❌ Error saving visitor to database." });
+//   }
+// });
 
+
+app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+    const { barcode, name, mobile, email } = req.body;
+    const file = req.file;
+    try {
+        const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+        await newVisitor.save();
+        
+        // Also create a default academic status record for the new student
+        const newStatus = new AcademicStatus({ barcode, isPromoted: true });
+        await newStatus.save();
+
+        res.status(200).json({ message: "✅ Visitor added successfully!" });
+    } catch (err) {
+        // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
+        if (err.code === 11000) { // Duplicate key error
+            console.warn(`Visitor with barcode ${barcode} may already exist.`);
+            return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
+        }
+        res.status(500).json({ message: "❌ Error saving visitor." });
+    }
+});
 
 // ✅ THIS ROUTE IS UPDATED WITH ADVANCED LOGGING FOR THE CSV PARSER
 app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
