@@ -28,7 +28,7 @@ const { body, validationResult } = require('express-validator');
 
 // ✅ ADDED: New Schema to track student academic status
 const AcademicStatusSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
+    barcode: { type: String, required: true, unique: true },
     isPromoted: { type: Boolean, default: true } // Default to promoted for new students
 });
 const AcademicStatus = mongoose.model("AcademicStatus", AcademicStatusSchema);
