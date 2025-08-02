@@ -293,54 +293,50 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
     if (!req.file) {
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
+
     const failedNames = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
+    
+    // Create a readable stream from the buffer to use the csv-parser
     const readableStream = require('stream').Readable.from(fileBuffer);
 
     readableStream
-        .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
-        .on('data', (row) => {
-            if (row.name) failedNames.push(row.name.trim());
-        })
-        .on('end', async () => {
-            try {
-                // ✅ MODIFIED: Smart search query that checks for all parts of a name, regardless of order.
-                const searchConditions = failedNames.map(name => {
-                    const nameParts = name.split(/\s+/).filter(Boolean); // Split name into parts like ['Borole', 'Durgesh']
-                    // Create a case-insensitive regex for each part of the name
-                    const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
-                    // Ensure the database entry contains ALL parts of the name
-                    return { $and: regexParts.map(regex => ({ name: regex })) };
-                });
-                
-                let failedVisitors = [];
-                if (searchConditions.length > 0) {
-                    failedVisitors = await Visitor.find({ $or: searchConditions });
-                }
-                const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
+      .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+      .on('data', (row) => {
+          // Read from the 'name' column of the CSV
+          if (row.name) {
+              failedNames.push(row.name.trim());
+          }
+      })
+      .on('end', async () => {
+          try {
+              // Find all visitors whose names are in the list from the CSV
+              const failedVisitors = await Visitor.find({ name: { $in: failedNames } });
+              // Extract their barcodes
+              const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
-                if (failedBarcodes.length === 0 && failedNames.length > 0) {
-                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
-                }
+              if (failedBarcodes.length === 0 && failedNames.length > 0) {
+                  console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
+              }
+              
+              // First, reset all students to the 'promoted' state.
+              await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
+              
+              let result = { modifiedCount: 0 };
+              if (failedBarcodes.length > 0) {
+                  // Then, specifically mark the students who failed as 'not promoted' using their barcodes.
+                  result = await AcademicStatus.updateMany(
+                      { barcode: { $in: failedBarcodes } },
+                      { $set: { isPromoted: false } }
+                  );
+              }
 
-                // First, reset all students to the 'promoted' state.
-                await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
-                
-                let result = { modifiedCount: 0 };
-                if (failedBarcodes.length > 0) {
-                    // Then, specifically mark the students who failed as 'not promoted'.
-                    result = await AcademicStatus.updateMany(
-                        { barcode: { $in: failedBarcodes } },
-                        { $set: { isPromoted: false } }
-                    );
-                }
-                
-                res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
-            } catch (error) {
-                console.error("❌ Error processing failed list:", error);
-                res.status(500).json({ message: "Server error during academic update." });
-            }
-        });
+              res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
+          } catch (error) {
+              console.error("❌ Error processing failed list:", error);
+              res.status(500).json({ message: "Server error during academic update." });
+          }
+      });
 });
 
 // One-time route to fix existing student data
