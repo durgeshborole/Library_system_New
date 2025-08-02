@@ -296,37 +296,45 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
 
     const failedNames = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
-    
-    // Create a readable stream from the buffer to use the csv-parser
     const readableStream = require('stream').Readable.from(fileBuffer);
 
     readableStream
         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
         .on('data', (row) => {
-            // Read from the 'name' column of the CSV
             if (row.name) {
                 failedNames.push(row.name.trim());
             }
         })
         .on('end', async () => {
             try {
-                // Find all visitors whose names are in the list from the CSV
-                const failedVisitors = await Visitor.find({ name: { $in: failedNames } });
-                // Extract their barcodes
+                // ✅ MODIFIED: This query now ignores case when searching for names.
+                // It creates a case-insensitive regular expression for each name.
+                const searchConditions = failedNames.map(name => {
+                    return { name: new RegExp('^' + name + '$', 'i') };
+                });
+                
+                let failedVisitors = [];
+                if (searchConditions.length > 0) {
+                    failedVisitors = await Visitor.find({ $or: searchConditions });
+                }
+
                 const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
-                if (failedBarcodes.length === 0) {
-                    console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
+                if (failedBarcodes.length === 0 && failedNames.length > 0) {
+                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
                 }
-                
+
                 // First, reset all students to the 'promoted' state.
                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
                 
-                // Then, specifically mark the students who failed as 'not promoted' using their barcodes.
-                const result = await AcademicStatus.updateMany(
-                    { barcode: { $in: failedBarcodes } },
-                    { $set: { isPromoted: false } }
-                );
+                let result = { modifiedCount: 0 };
+                if (failedBarcodes.length > 0) {
+                    // Then, specifically mark the students who failed as 'not promoted'.
+                    result = await AcademicStatus.updateMany(
+                        { barcode: { $in: failedBarcodes } },
+                        { $set: { isPromoted: false } }
+                    );
+                }
 
                 console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
                 res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
