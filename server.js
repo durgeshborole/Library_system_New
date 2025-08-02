@@ -304,11 +304,12 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         })
         .on('end', async () => {
             try {
-                // ✅ MODIFIED: This query is now much smarter and handles different name orders.
+                // ✅ MODIFIED: Smart search query that checks for all parts of a name, regardless of order.
                 const searchConditions = failedNames.map(name => {
-                    const nameParts = name.split(/\s+/).filter(Boolean); // Split name into parts, remove empty spaces
-                    // Create a regex for each part of the name to ensure all parts are present
+                    const nameParts = name.split(/\s+/).filter(Boolean); // Split name into parts like ['Borole', 'Durgesh']
+                    // Create a case-insensitive regex for each part of the name
                     const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
+                    // Ensure the database entry contains ALL parts of the name
                     return { $and: regexParts.map(regex => ({ name: regex })) };
                 });
                 
@@ -322,10 +323,12 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
                      console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
                 }
 
+                // First, reset all students to the 'promoted' state.
                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
                 
                 let result = { modifiedCount: 0 };
                 if (failedBarcodes.length > 0) {
+                    // Then, specifically mark the students who failed as 'not promoted'.
                     result = await AcademicStatus.updateMany(
                         { barcode: { $in: failedBarcodes } },
                         { $set: { isPromoted: false } }
@@ -340,28 +343,20 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         });
 });
 
-// ✅ ADDED: A new, one-time route to fix your existing database records
+// One-time route to fix existing student data
 app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
     try {
         const allVisitors = await Visitor.find({}).select('barcode');
         const existingStatuses = await AcademicStatus.find({}).select('barcode');
         const existingBarcodes = new Set(existingStatuses.map(s => s.barcode));
-
-        const missingStatuses = allVisitors.filter(v => !existingBarcodes.has(v.barcode));
+        const missingStatuses = allVisitors.filter(v => v.barcode && !existingBarcodes.has(v.barcode));
         
         if (missingStatuses.length === 0) {
             return res.send("All visitors already have an academic status. No fix needed.");
         }
-
-        const newStatuses = missingStatuses.map(v => ({
-            barcode: v.barcode,
-            isPromoted: true
-        }));
-
-        await AcademicStatus.insertMany(newStatuses);
-
+        const newStatuses = missingStatuses.map(v => ({ barcode: v.barcode, isPromoted: true }));
+        await AcademicStatus.insertMany(newStatuses, { ordered: false });
         res.send(`Successfully created ${newStatuses.length} missing academic status records. You can now run the promotion update.`);
-
     } catch (error) {
         res.status(500).send("An error occurred: " + error.message);
     }
