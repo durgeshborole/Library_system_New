@@ -307,36 +307,37 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         })
         .on('end', async () => {
             try {
-                // ✅ MODIFIED: This query now ignores case when searching for names.
-                // It creates a case-insensitive regular expression for each name.
-                const searchConditions = failedNames.map(name => {
-                    return { name: new RegExp('^' + name + '$', 'i') };
-                });
+                // ✅ ADDED: Log the names we are searching for from the CSV
+                console.log("[Academic Update] Searching for these names:", failedNames);
+
+                // ✅ ADDED: Log a sample of names from the database for comparison
+                const sampleDbVisitors = await Visitor.find({}).limit(10).select('name barcode -_id');
+                console.log("[Academic Update] Sample names from database:", sampleDbVisitors);
+
+                const searchConditions = failedNames.map(name => ({
+                    name: new RegExp('^' + name + '$', 'i')
+                }));
                 
                 let failedVisitors = [];
                 if (searchConditions.length > 0) {
                     failedVisitors = await Visitor.find({ $or: searchConditions });
                 }
-
                 const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
                 if (failedBarcodes.length === 0 && failedNames.length > 0) {
-                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
+                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided.`);
                 }
 
-                // First, reset all students to the 'promoted' state.
                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
                 
                 let result = { modifiedCount: 0 };
                 if (failedBarcodes.length > 0) {
-                    // Then, specifically mark the students who failed as 'not promoted'.
                     result = await AcademicStatus.updateMany(
                         { barcode: { $in: failedBarcodes } },
                         { $set: { isPromoted: false } }
                     );
                 }
-
-                console.log(`✅ Academic status updated. ${result.modifiedCount} students marked as not promoted.`);
+                
                 res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
             } catch (error) {
                 console.error("❌ Error processing failed list:", error);
