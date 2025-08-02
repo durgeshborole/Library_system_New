@@ -1126,7 +1126,7 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
         await newVisitor.save();
         
         // Also create a default academic status record for the new student
-        const newStatus = new AcademicStatus({ name, isPromoted: true });
+        const newStatus = new AcademicStatus({ barcode, isPromoted: true });
         await newStatus.save();
 
         res.status(200).json({ message: "✅ Visitor added successfully!" });
