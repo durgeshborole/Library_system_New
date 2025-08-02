@@ -478,8 +478,93 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 
 // }
 
+// function decodeBarcode(barcode) {
+//   // --- Default values and basic validation ---
+//   const unknownResult = {
+//     year: "N/A",
+//     department: "Unknown",
+//     designation: "Unknown"
+//   };
+
+//   if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
+//     return unknownResult;
+//   }
+
+//   // --- Data Mappings ---
+//   const departments = {
+//     '1': "Civil Engineering",
+//     '2': "Mechanical Engineering",
+//     '3': "Computer Science",
+//     '4': "Electronics and Telecommunication",
+//     '5': "Electronics and Computer",
+//     'B': "Library",
+//   };
+
+//   // --- Extract Information based on Designation ---
+//   const designationPrefix = barcode.charAt(0).toUpperCase();
+//   let designation = "Unknown";
+//   let department = "Unknown";
+//   let year = "N/A";
+
+//   // Check for Faculty
+//   if (designationPrefix === 'F') {
+//     designation = "Faculty";
+//     const departmentCode = barcode.charAt(3);
+//     department = departments[departmentCode] || "Unknown";
+//     year = "N/A";
+
+//   // Check for Librarian
+//   } else if (designationPrefix === 'L') {
+//     designation = "Librarian";
+//     department = "Library";
+//     year = "N/A";
+
+//   // Check for Student
+//   } else if (!isNaN(parseInt(designationPrefix, 10))) {
+//     designation = "Student";
+
+//     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
+//     const departmentCode = barcode.charAt(2);
+//     const enrollTypeCode = barcode.slice(3, 5);
+
+//     department = departments[departmentCode] || "Unknown";
+
+//     // --- Automatic Year Calculation ---
+//     const now = new Date();
+//     let currentAcademicYear = now.getFullYear();
+//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
+
+//     // The academic year starts in July. If it's before July,
+//     // we are still in the previous academic year.
+//     if (currentMonth < 6) {
+//       currentAcademicYear--;
+//     }
+
+//     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
+//     const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
+
+//     if (enrollTypeCode === "10") { // Regular 4-year program
+//       if (yearsSinceAdmission < 0) year = "Pre-admission";
+//       else if (yearsSinceAdmission === 0) year = "First Year";
+//       else if (yearsSinceAdmission === 1) year = "Second Year";
+//       else if (yearsSinceAdmission === 2) year = "Third Year";
+//       else if (yearsSinceAdmission === 3) year = "Final Year";
+//       else year = "Graduated";
+//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+//       if (yearsSinceAdmission < 0) year = "Pre-admission";
+//       else if (yearsSinceAdmission === 0) year = "Second Year";
+//       else if (yearsSinceAdmission === 1) year = "Third Year";
+//       else if (yearsSinceAdmission === 2) year = "Final Year";
+//       else year = "Graduated";
+//     } else {
+//       year = "Unknown Enrollment Type";
+//     }
+//   }
+
+//   return { year, department, designation };
+// }
+
 function decodeBarcode(barcode) {
-  // --- Default values and basic validation ---
   const unknownResult = {
     year: "N/A",
     department: "Unknown",
@@ -490,7 +575,6 @@ function decodeBarcode(barcode) {
     return unknownResult;
   }
 
-  // --- Data Mappings ---
   const departments = {
     '1': "Civil Engineering",
     '2': "Mechanical Engineering",
@@ -500,62 +584,36 @@ function decodeBarcode(barcode) {
     'B': "Library",
   };
 
-  // --- Extract Information based on Designation ---
   const designationPrefix = barcode.charAt(0).toUpperCase();
   let designation = "Unknown";
   let department = "Unknown";
   let year = "N/A";
 
-  // Check for Faculty
   if (designationPrefix === 'F') {
     designation = "Faculty";
     const departmentCode = barcode.charAt(3);
     department = departments[departmentCode] || "Unknown";
     year = "N/A";
 
-  // Check for Librarian
   } else if (designationPrefix === 'L') {
     designation = "Librarian";
     department = "Library";
     year = "N/A";
 
-  // Check for Student
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
 
-    const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
-    const departmentCode = barcode.charAt(2);
-    const enrollTypeCode = barcode.slice(3, 5);
+    const admissionYearCode = barcode.slice(0, 2); // e.g. "26"
+    const departmentCode = barcode.charAt(2);      // e.g. "4"
+    const enrollTypeCode = barcode.slice(3, 5);    // e.g. "10" or "20"
 
     department = departments[departmentCode] || "Unknown";
 
-    // --- Automatic Year Calculation ---
-    const now = new Date();
-    let currentAcademicYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0 = January, 6 = July
-
-    // The academic year starts in July. If it's before July,
-    // we are still in the previous academic year.
-    if (currentMonth < 6) {
-      currentAcademicYear--;
-    }
-
-    const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
-    const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
-
-    if (enrollTypeCode === "10") { // Regular 4-year program
-      if (yearsSinceAdmission < 0) year = "Pre-admission";
-      else if (yearsSinceAdmission === 0) year = "First Year";
-      else if (yearsSinceAdmission === 1) year = "Second Year";
-      else if (yearsSinceAdmission === 2) year = "Third Year";
-      else if (yearsSinceAdmission === 3) year = "Final Year";
-      else year = "Graduated";
-    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
-      if (yearsSinceAdmission < 0) year = "Pre-admission";
-      else if (yearsSinceAdmission === 0) year = "Second Year";
-      else if (yearsSinceAdmission === 1) year = "Third Year";
-      else if (yearsSinceAdmission === 2) year = "Final Year";
-      else year = "Graduated";
+    // Always treat students as just starting unless promoted
+    if (enrollTypeCode === "10") {
+      year = "First Year";
+    } else if (enrollTypeCode === "20") {
+      year = "Second Year";
     } else {
       year = "Unknown Enrollment Type";
     }
@@ -570,10 +628,6 @@ async function decodeBarcodeWithPromotion(barcode) {
 
   if (decoded.designation !== "Student") return decoded;
 
-  if (["Graduated", "Pre-admission"].includes(decoded.year)) {
-    return decoded;
-  }
-
   const status = await AcademicStatus.findOne({ barcode });
 
   if (status?.isPromoted === false) {
@@ -584,10 +638,20 @@ async function decodeBarcodeWithPromotion(barcode) {
       "Graduated": "Final Year"
     };
     decoded.year = downgradeMap[decoded.year] || decoded.year;
+  } else if (status?.isPromoted === true) {
+    const upgradeMap = {
+      "First Year": "Second Year",
+      "Second Year": "Third Year",
+      "Third Year": "Final Year",
+      "Final Year": "Graduated"
+    };
+    decoded.year = upgradeMap[decoded.year] || decoded.year;
   }
 
   return decoded;
 }
+
+
 
 
 // app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
