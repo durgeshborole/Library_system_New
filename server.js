@@ -293,7 +293,6 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
     if (!req.file) {
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
-
     const failedNames = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
     const readableStream = require('stream').Readable.from(fileBuffer);
@@ -301,22 +300,17 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
     readableStream
         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
         .on('data', (row) => {
-            if (row.name) {
-                failedNames.push(row.name.trim());
-            }
+            if (row.name) failedNames.push(row.name.trim());
         })
         .on('end', async () => {
             try {
-                // ✅ ADDED: Log the names we are searching for from the CSV
-                console.log("[Academic Update] Searching for these names:", failedNames);
-
-                // ✅ ADDED: Log a sample of names from the database for comparison
-                const sampleDbVisitors = await Visitor.find({}).limit(10).select('name barcode -_id');
-                console.log("[Academic Update] Sample names from database:", sampleDbVisitors);
-
-                const searchConditions = failedNames.map(name => ({
-                    name: new RegExp('^' + name + '$', 'i')
-                }));
+                // ✅ MODIFIED: This query is now much smarter and handles different name orders.
+                const searchConditions = failedNames.map(name => {
+                    const nameParts = name.split(/\s+/).filter(Boolean); // Split name into parts, remove empty spaces
+                    // Create a regex for each part of the name to ensure all parts are present
+                    const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
+                    return { $and: regexParts.map(regex => ({ name: regex })) };
+                });
                 
                 let failedVisitors = [];
                 if (searchConditions.length > 0) {
@@ -325,7 +319,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
                 const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
                 if (failedBarcodes.length === 0 && failedNames.length > 0) {
-                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided.`);
+                     console.warn(`[Academic Update] No registered students found for the ${failedNames.length} names provided in the CSV.`);
                 }
 
                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
@@ -338,7 +332,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
                     );
                 }
                 
-                res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
+                res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
             } catch (error) {
                 console.error("❌ Error processing failed list:", error);
                 res.status(500).json({ message: "Server error during academic update." });
