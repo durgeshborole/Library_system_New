@@ -476,97 +476,9 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 //     designation
 //   };
 
-
-
 // }
 
-// function decodeBarcode(barcode) {
-//   // --- Default values and basic validation ---
-//   const unknownResult = {
-//     year: "N/A",
-//     department: "Unknown",
-//     designation: "Unknown"
-//   };
-
-//   if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
-//     return unknownResult;
-//   }
-
-//   // --- Data Mappings ---
-//   const departments = {
-//     '1': "Civil Engineering",
-//     '2': "Mechanical Engineering",
-//     '3': "Computer Science",
-//     '4': "Electronics and Telecommunication",
-//     '5': "Electronics and Computer",
-//     'B': "Library",
-//   };
-
-//   // --- Extract Information based on Designation ---
-//   const designationPrefix = barcode.charAt(0).toUpperCase();
-//   let designation = "Unknown";
-//   let department = "Unknown";
-//   let year = "N/A";
-
-//   // Check for Faculty
-//   if (designationPrefix === 'F') {
-//     designation = "Faculty";
-//     const departmentCode = barcode.charAt(3);
-//     department = departments[departmentCode] || "Unknown";
-//     year = "N/A";
-
-//   // Check for Librarian
-//   } else if (designationPrefix === 'L') {
-//     designation = "Librarian";
-//     department = "Library";
-//     year = "N/A";
-
-//   // Check for Student
-//   } else if (!isNaN(parseInt(designationPrefix, 10))) {
-//     designation = "Student";
-
-//     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
-//     const departmentCode = barcode.charAt(2);
-//     const enrollTypeCode = barcode.slice(3, 5);
-
-//     department = departments[departmentCode] || "Unknown";
-
-//     // --- Automatic Year Calculation ---
-//     const now = new Date();
-//     let currentAcademicYear = now.getFullYear();
-//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
-
-//     // The academic year starts in July. If it's before July,
-//     // we are still in the previous academic year.
-//     if (currentMonth < 6) {
-//       currentAcademicYear--;
-//     }
-
-//     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
-//     const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
-
-//     if (enrollTypeCode === "10") { // Regular 4-year program
-//       if (yearsSinceAdmission < 0) year = "Pre-admission";
-//       else if (yearsSinceAdmission === 0) year = "First Year";
-//       else if (yearsSinceAdmission === 1) year = "Second Year";
-//       else if (yearsSinceAdmission === 2) year = "Third Year";
-//       else if (yearsSinceAdmission === 3) year = "Final Year";
-//       else year = "Graduated";
-//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
-//       if (yearsSinceAdmission < 0) year = "Pre-admission";
-//       else if (yearsSinceAdmission === 0) year = "Second Year";
-//       else if (yearsSinceAdmission === 1) year = "Third Year";
-//       else if (yearsSinceAdmission === 2) year = "Final Year";
-//       else year = "Graduated";
-//     } else {
-//       year = "Unknown Enrollment Type";
-//     }
-//   }
-
-//   return { year, department, designation };
-// }
-
-async function decodeBarcode(barcode) {
+function decodeBarcode(barcode) {
   // --- Default values and basic validation ---
   const unknownResult = {
     year: "N/A",
@@ -594,40 +506,43 @@ async function decodeBarcode(barcode) {
   let department = "Unknown";
   let year = "N/A";
 
-  // Check for Faculty or Librarian
-  if (designationPrefix === 'F' || designationPrefix === 'L') {
-    designation = designationPrefix === 'F' ? "Faculty" : "Librarian";
-    department = designationPrefix === 'F' ? (departments[barcode.charAt(3)] || "Unknown") : "Library";
+  // Check for Faculty
+  if (designationPrefix === 'F') {
+    designation = "Faculty";
+    const departmentCode = barcode.charAt(3);
+    department = departments[departmentCode] || "Unknown";
+    year = "N/A";
+
+  // Check for Librarian
+  } else if (designationPrefix === 'L') {
+    designation = "Librarian";
+    department = "Library";
     year = "N/A";
 
   // Check for Student
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
-    const admissionYearCode = barcode.slice(0, 2); // e.g., "24" for 2024
+
+    const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
     const departmentCode = barcode.charAt(2);
     const enrollTypeCode = barcode.slice(3, 5);
+
     department = departments[departmentCode] || "Unknown";
-    
-    // --- Dynamic Year Calculation with Promotion Check ---
+
+    // --- Automatic Year Calculation ---
     const now = new Date();
     let currentAcademicYear = now.getFullYear();
-    // Academic year starts in July. If it's before July, we are in the previous academic year.
-    if (now.getMonth() < 6) { 
+    const currentMonth = now.getMonth(); // 0 = January, 6 = July
+
+    // The academic year starts in July. If it's before July,
+    // we are still in the previous academic year.
+    if (currentMonth < 6) {
       currentAcademicYear--;
     }
 
     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
-    let yearsSinceAdmission = currentAcademicYear - admissionFullYear;
+    const yearsSinceAdmission = currentAcademicYear - admissionFullYear;
 
-    // Check the student's promotion status from the database
-    const academicStatus = await AcademicStatus.findOne({ barcode });
-    
-    // If the student is found and is marked as NOT promoted, hold them back one year
-    if (academicStatus && !academicStatus.isPromoted) {
-        yearsSinceAdmission--; 
-    }
-
-    // Determine the year based on the final calculated duration
     if (enrollTypeCode === "10") { // Regular 4-year program
       if (yearsSinceAdmission < 0) year = "Pre-admission";
       else if (yearsSinceAdmission === 0) year = "First Year";
