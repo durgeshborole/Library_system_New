@@ -564,6 +564,65 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 //   return { year, department, designation };
 // }
 
+// function decodeBarcode(barcode) {
+//   const unknownResult = {
+//     year: "N/A",
+//     department: "Unknown",
+//     designation: "Unknown"
+//   };
+
+//   if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
+//     return unknownResult;
+//   }
+
+//   const departments = {
+//     '1': "Civil Engineering",
+//     '2': "Mechanical Engineering",
+//     '3': "Computer Science",
+//     '4': "Electronics and Telecommunication",
+//     '5': "Electronics and Computer",
+//     'B': "Library",
+//   };
+
+//   const designationPrefix = barcode.charAt(0).toUpperCase();
+//   let designation = "Unknown";
+//   let department = "Unknown";
+//   let year = "N/A";
+
+//   if (designationPrefix === 'F') {
+//     designation = "Faculty";
+//     const departmentCode = barcode.charAt(3);
+//     department = departments[departmentCode] || "Unknown";
+//     year = "N/A";
+
+//   } else if (designationPrefix === 'L') {
+//     designation = "Librarian";
+//     department = "Library";
+//     year = "N/A";
+
+//   } else if (!isNaN(parseInt(designationPrefix, 10))) {
+//     designation = "Student";
+
+//     const admissionYearCode = barcode.slice(0, 2); // e.g. "26"
+//     const departmentCode = barcode.charAt(2);      // e.g. "4"
+//     const enrollTypeCode = barcode.slice(3, 5);    // e.g. "10" or "20"
+
+//     department = departments[departmentCode] || "Unknown";
+
+//     // Always treat students as just starting unless promoted
+//     if (enrollTypeCode === "10") {
+//       year = "First Year";
+//     } else if (enrollTypeCode === "20") {
+//       year = "Second Year";
+//     } else {
+//       year = "Unknown Enrollment Type";
+//     }
+//   }
+
+//   return { year, department, designation };
+// }
+
+
 function decodeBarcode(barcode) {
   const unknownResult = {
     year: "N/A",
@@ -602,25 +661,48 @@ function decodeBarcode(barcode) {
 
   } else if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
-
-    const admissionYearCode = barcode.slice(0, 2); // e.g. "26"
-    const departmentCode = barcode.charAt(2);      // e.g. "4"
-    const enrollTypeCode = barcode.slice(3, 5);    // e.g. "10" or "20"
-
+    const departmentCode = barcode.charAt(2);
+    const enrollTypeCode = barcode.slice(3, 5);
     department = departments[departmentCode] || "Unknown";
 
-    // Always treat students as just starting unless promoted
-    if (enrollTypeCode === "10") {
-      year = "First Year";
-    } else if (enrollTypeCode === "20") {
-      year = "Second Year";
-    } else {
-      year = "Unknown Enrollment Type";
-    }
+    // Hardcoded base year for new students
+    if (enrollTypeCode === "10") year = "First Year";
+    else if (enrollTypeCode === "20") year = "Second Year";
+    else year = "Unknown Enrollment Type";
   }
 
   return { year, department, designation };
 }
+
+
+
+// async function decodeBarcodeWithPromotion(barcode) {
+//   const decoded = decodeBarcode(barcode);
+
+//   if (decoded.designation !== "Student") return decoded;
+
+//   const status = await AcademicStatus.findOne({ barcode });
+
+//   if (status?.isPromoted === false) {
+//     const downgradeMap = {
+//       "Second Year": "First Year",
+//       "Third Year": "Second Year",
+//       "Final Year": "Third Year",
+//       "Graduated": "Final Year"
+//     };
+//     decoded.year = downgradeMap[decoded.year] || decoded.year;
+//   } else if (status?.isPromoted === true) {
+//     const upgradeMap = {
+//       "First Year": "Second Year",
+//       "Second Year": "Third Year",
+//       "Third Year": "Final Year",
+//       "Final Year": "Graduated"
+//     };
+//     decoded.year = upgradeMap[decoded.year] || decoded.year;
+//   }
+
+//   return decoded;
+// }
 
 
 async function decodeBarcodeWithPromotion(barcode) {
@@ -631,6 +713,7 @@ async function decodeBarcodeWithPromotion(barcode) {
   const status = await AcademicStatus.findOne({ barcode });
 
   if (status?.isPromoted === false) {
+    // They were held back
     const downgradeMap = {
       "Second Year": "First Year",
       "Third Year": "Second Year",
@@ -639,6 +722,7 @@ async function decodeBarcodeWithPromotion(barcode) {
     };
     decoded.year = downgradeMap[decoded.year] || decoded.year;
   } else if (status?.isPromoted === true) {
+    // Promote if eligible
     const upgradeMap = {
       "First Year": "Second Year",
       "Second Year": "Third Year",
@@ -650,7 +734,6 @@ async function decodeBarcodeWithPromotion(barcode) {
 
   return decoded;
 }
-
 
 
 
