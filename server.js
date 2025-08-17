@@ -29,7 +29,7 @@ const { body, validationResult } = require('express-validator');
 // ✅ ADDED: New Schema to track student academic status
 const AcademicStatusSchema = new mongoose.Schema({
     barcode: { type: String, required: true, unique: true },
-    isPromoted: { type: Boolean, default: true } // Default to promoted for new students
+    year: { type: String, required: true } 
 });
 const AcademicStatus = mongoose.model("AcademicStatus", AcademicStatusSchema);
 
@@ -254,36 +254,58 @@ const isHod = (req, res, next) => {
 };
 
 
+
 // app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
 //     if (!req.file) {
 //         return res.status(400).json({ message: "No CSV file uploaded." });
 //     }
-//     const failedBarcodes = [];
+
+//     const failedNames = [];
 //     const fileBuffer = req.file.buffer.toString('utf-8');
-    
-//     // Create a readable stream from the buffer to use the csv-parser
 //     const readableStream = require('stream').Readable.from(fileBuffer);
 
 //     readableStream
 //         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
 //         .on('data', (row) => {
-//             if (row.name) {
-//                 failedBarcodes.push(row.name);
-//             }
+//             if (row.name) failedNames.push(row.name.trim());
 //         })
 //         .on('end', async () => {
 //             try {
-//                 // First, reset all students to the 'promoted' state for the new year.
+//                 console.log("\n--- [Academic Update] Starting Diagnostic ---");
+//                 console.log("[Academic Update] 1. Names read from CSV:", failedNames);
+
+//                 const searchConditions = failedNames.map(name => {
+//                     const nameParts = name.split(/\s+/).filter(Boolean);
+//                     const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
+//                     return { $and: regexParts.map(regex => ({ name: regex })) };
+//                 });
+                
+//                 // ✅ ADDED: Log the exact query being sent to the database
+//                 console.log("[Academic Update] 2. Generated MongoDB Query:", JSON.stringify({ $or: searchConditions }, null, 2));
+
+//                 let failedVisitors = [];
+//                 if (searchConditions.length > 0) {
+//                     failedVisitors = await Visitor.find({ $or: searchConditions });
+//                 }
+//                 const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
+
+//                 // ✅ ADDED: Log the names that were successfully found
+//                 console.log(`[Academic Update] 3. Found ${failedVisitors.length} matching students in DB:`, failedVisitors.map(v => v.name));
+
 //                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
                 
-//                 // Then, specifically mark the students from the CSV as 'not promoted'.
-//                 const result = await AcademicStatus.updateMany(
-//                     { barcode: { $in: failedBarcodes } },
-//                     { $set: { isPromoted: false } }
-//                 );
-
-//                 res.status(200).json({ success: true, message: `Academic year status updated. ${result.modifiedCount} students have been held back.` });
+//                 let result = { modifiedCount: 0 };
+//                 if (failedBarcodes.length > 0) {
+//                     result = await AcademicStatus.updateMany(
+//                         { barcode: { $in: failedBarcodes } },
+//                         { $set: { isPromoted: false } }
+//                     );
+//                 }
+                
+//                 console.log("--- [Academic Update] Finished ---");
+//                 res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
 //             } catch (error) {
+//                 console.error("❌ Error processing failed list:", error);
 //                 res.status(500).json({ message: "Server error during academic update." });
 //             }
 //         });
@@ -294,56 +316,55 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
 
-    const failedNames = [];
+    const failedBarcodes = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
     const readableStream = require('stream').Readable.from(fileBuffer);
 
     readableStream
         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
         .on('data', (row) => {
-            if (row.name) failedNames.push(row.name.trim());
+            if (row.barcode) failedBarcodes.push(row.barcode.trim());
         })
         .on('end', async () => {
             try {
-                console.log("\n--- [Academic Update] Starting Diagnostic ---");
-                console.log("[Academic Update] 1. Names read from CSV:", failedNames);
+                // Get all students
+                const allStudents = await AcademicStatus.find({});
+                const studentUpdates = [];
 
-                const searchConditions = failedNames.map(name => {
-                    const nameParts = name.split(/\s+/).filter(Boolean);
-                    const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
-                    return { $and: regexParts.map(regex => ({ name: regex })) };
-                });
-                
-                // ✅ ADDED: Log the exact query being sent to the database
-                console.log("[Academic Update] 2. Generated MongoDB Query:", JSON.stringify({ $or: searchConditions }, null, 2));
+                const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
+                const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
-                let failedVisitors = [];
-                if (searchConditions.length > 0) {
-                    failedVisitors = await Visitor.find({ $or: searchConditions });
+                // Iterate through all students to determine their next year
+                for (const student of allStudents) {
+                    // Check if the student is on the failed list
+                    const isFailed = failedBarcodes.includes(student.barcode);
+                    
+                    if (!isFailed) {
+                        // If student is not on the failed list, promote them
+                        const nextYear = yearMap.get(student.year) || student.year;
+                        studentUpdates.push({
+                            updateOne: {
+                                filter: { barcode: student.barcode },
+                                update: { $set: { year: nextYear } }
+                            }
+                        });
+                    }
+                    // If the student is on the failed list, we do nothing, so they stay in their current year.
                 }
-                const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
-                // ✅ ADDED: Log the names that were successfully found
-                console.log(`[Academic Update] 3. Found ${failedVisitors.length} matching students in DB:`, failedVisitors.map(v => v.name));
-
-                await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
-                
-                let result = { modifiedCount: 0 };
-                if (failedBarcodes.length > 0) {
-                    result = await AcademicStatus.updateMany(
-                        { barcode: { $in: failedBarcodes } },
-                        { $set: { isPromoted: false } }
-                    );
+                if (studentUpdates.length > 0) {
+                    await AcademicStatus.bulkWrite(studentUpdates);
+                    res.status(200).json({ success: true, message: `Academic year status updated. ${studentUpdates.length} students have been promoted.` });
+                } else {
+                    res.status(200).json({ success: true, message: "No students were promoted." });
                 }
-                
-                console.log("--- [Academic Update] Finished ---");
-                res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
             } catch (error) {
                 console.error("❌ Error processing failed list:", error);
                 res.status(500).json({ message: "Server error during academic update." });
             }
         });
 });
+
 
 // One-time route to fix existing student data
 app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
@@ -524,34 +545,51 @@ function decodeBarcode(barcode) {
   };
 }
 
+// async function decodeBarcodeWithPromotion(barcode) {
+//   const decoded = decodeBarcode(barcode);
+
+//   if (decoded.designation !== "Student") return decoded;
+
+//   const status = await AcademicStatus.findOne({ barcode });
+
+//   if (status?.isPromoted === false) {
+//     const downgradeMap = {
+//       "Second Year": "First Year",
+//       "Third Year": "Second Year",
+//       "Final Year": "Third Year",
+//       "Graduated": "Final Year"
+//     };
+//     decoded.year = downgradeMap[decoded.year] || decoded.year;
+//   } else if (status?.isPromoted === true) {
+//     const upgradeMap = {
+//       "First Year": "Second Year",
+//       "Second Year": "Third Year",
+//       "Third Year": "Final Year",
+//       "Final Year": "Graduated"
+//     };
+//     decoded.year = upgradeMap[decoded.year] || decoded.year;
+//   }
+
+//   return decoded;
+// }
+
 async function decodeBarcodeWithPromotion(barcode) {
+  // Get the base year from the pure decodeBarcode function
   const decoded = decodeBarcode(barcode);
 
+  // Only apply promotion logic to students
   if (decoded.designation !== "Student") return decoded;
 
+  // Find the student's academic status from the database
   const status = await AcademicStatus.findOne({ barcode });
 
-  if (status?.isPromoted === false) {
-    const downgradeMap = {
-      "Second Year": "First Year",
-      "Third Year": "Second Year",
-      "Final Year": "Third Year",
-      "Graduated": "Final Year"
-    };
-    decoded.year = downgradeMap[decoded.year] || decoded.year;
-  } else if (status?.isPromoted === true) {
-    const upgradeMap = {
-      "First Year": "Second Year",
-      "Second Year": "Third Year",
-      "Third Year": "Final Year",
-      "Final Year": "Graduated"
-    };
-    decoded.year = upgradeMap[decoded.year] || decoded.year;
+  // Use the year from the database if it exists, otherwise fall back to the decoded year
+  if (status?.year) {
+    decoded.year = status.year;
   }
 
   return decoded;
 }
-
 
 
 
@@ -1194,6 +1232,29 @@ app.get('/admin/monthly-awards', async (req, res) => {
 // });
 
 
+// app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+//     const { barcode, name, mobile, email } = req.body;
+//     const file = req.file;
+//     try {
+//         const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+//         const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+//         await newVisitor.save();
+        
+//         // Also create a default academic status record for the new student
+//         const newStatus = new AcademicStatus({ barcode, isPromoted: true });
+//         await newStatus.save();
+
+//         res.status(200).json({ message: "✅ Visitor added successfully!" });
+//     } catch (err) {
+//         // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
+//         if (err.code === 11000) { // Duplicate key error
+//             console.warn(`Visitor with barcode ${barcode} may already exist.`);
+//             return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
+//         }
+//         res.status(500).json({ message: "❌ Error saving visitor." });
+//     }
+// });
+
 app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
     const { barcode, name, mobile, email } = req.body;
     const file = req.file;
@@ -1203,7 +1264,8 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
         await newVisitor.save();
         
         // Also create a default academic status record for the new student
-        const newStatus = new AcademicStatus({ barcode, isPromoted: true });
+        const decoded = decodeBarcode(barcode);
+        const newStatus = new AcademicStatus({ barcode, year: decoded.year });
         await newStatus.save();
 
         res.status(200).json({ message: "✅ Visitor added successfully!" });
@@ -1217,7 +1279,7 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
     }
 });
 
-// // ✅ THIS ROUTE IS UPDATED WITH ADVANCED LOGGING FOR THE CSV PARSER
+
 // app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
 //   try {
 //     const csvFile = req.files["csv"]?.[0];
@@ -1237,37 +1299,22 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
 
 //     const recordsToInsert = [];
 
-//     console.log("[Bulk Upload] Starting to process CSV file (photos are optional)...");
-
 //     fs.createReadStream(csvFile.path)
 //       .pipe(csv({
 //         trim: true,
 //         bom: true,
 //         mapHeaders: ({ header }) => header.trim().toLowerCase()
 //       }))
-//       .on("error", (error) => {
-//         console.error("❌ CSV Parsing Error:", error.message);
-//       })
-//       .on("headers", (headers) => {
-//         console.log("[Bulk Upload] ✅ CSV Headers Found and Normalized:", headers);
-//       })
 //       .on("data", (row) => {
 //         const { barcode, name, mobile, email } = row;
-
-//         // ✅ NEW LOGIC: First, validate that the only two required fields exist.
 //         if (!barcode || !name) {
-//           console.warn(`[Bulk Upload] ⚠️ SKIPPING ROW: The 'barcode' and 'name' columns are both required. Found barcode: '${barcode}', name: '${name}'.`);
-//           return; // Stop processing this row and move to the next.
+//           console.warn(`[Bulk Upload] ⚠️ SKIPPING ROW: The 'barcode' and 'name' columns are required. Found barcode: '${barcode}', name: '${name}'.`);
+//           return;
 //         }
-
-//         // If validation passes, find the photo (it's optional).
 //         const photoUrl = photoMap[barcode.toLowerCase()] || null;
-
 //         if (!photoUrl) {
 //           console.info(`[Bulk Upload] ℹ️ INFO: No photo found for barcode '${barcode}'. Adding visitor without photo.`);
 //         }
-
-//         // ✅ ALWAYS add the record to our list if barcode and name are present.
 //         recordsToInsert.push({
 //           barcode,
 //           name,
@@ -1277,15 +1324,28 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
 //         });
 //       })
 //       .on("end", async () => {
-//         console.log(`[Bulk Upload] Finished reading CSV file. Found ${recordsToInsert.length} valid records to insert.`);
 //         try {
 //           if (recordsToInsert.length > 0) {
-//             // Using insertMany to add all collected records at once.
-//             const result = await Visitor.insertMany(recordsToInsert, { ordered: false });
-//             console.log(`[Bulk Upload] ✅ Successfully inserted ${result.length} records into the database.`);
-//             res.status(200).json({ success: true, message: `Successfully added ${result.length} visitors.` });
+//             // Step 1: Insert all the new visitors
+//             const result = await Visitor.insertMany(recordsToInsert, { ordered: false }).catch(e => {
+//                 if (e.code !== 11000) throw e; // Ignore duplicate visitor errors, but throw others
+//                 console.warn("Some visitors were duplicates and were skipped.");
+//             });
+//             const insertedCount = result ? result.length : recordsToInsert.length;
+            
+//             // ✅ ADDED: Step 2: Create the AcademicStatus record for each new visitor
+//             const statusRecords = recordsToInsert.map(v => ({
+//                 barcode: v.barcode,
+//                 isPromoted: true // Default to promoted
+//             }));
+//             await AcademicStatus.insertMany(statusRecords, { ordered: false }).catch(e => {
+//                 if (e.code !== 11000) throw e; // Ignore duplicate status errors
+//                 console.warn("Some academic status records already existed and were skipped.");
+//             });
+
+//             console.log(`[Bulk Upload] ✅ Successfully processed ${insertedCount} new visitors and their academic statuses.`);
+//             res.status(200).json({ success: true, message: `Successfully added ${insertedCount} visitors.` });
 //           } else {
-//             console.log("[Bulk Upload] ⚠️ No valid records were found to insert.");
 //             res.status(200).json({ success: true, message: "0 visitors were added. Please check the server console for warnings." });
 //           }
 //         } catch (dbError) {
@@ -1293,7 +1353,6 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
 //           res.status(500).json({ success: false, message: "A database error occurred during the bulk insert." });
 //         }
 //       });
-
 //   } catch (err) {
 //     console.error("❌ General error in bulk upload:", err);
 //     res.status(500).json({ success: false, message: "A server error occurred." });
@@ -1354,10 +1413,13 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
             const insertedCount = result ? result.length : recordsToInsert.length;
             
             // ✅ ADDED: Step 2: Create the AcademicStatus record for each new visitor
-            const statusRecords = recordsToInsert.map(v => ({
-                barcode: v.barcode,
-                isPromoted: true // Default to promoted
-            }));
+            const statusRecords = recordsToInsert.map(v => {
+                const decoded = decodeBarcode(v.barcode);
+                return {
+                  barcode: v.barcode,
+                  year: decoded.year
+                };
+            });
             await AcademicStatus.insertMany(statusRecords, { ordered: false }).catch(e => {
                 if (e.code !== 11000) throw e; // Ignore duplicate status errors
                 console.warn("Some academic status records already existed and were skipped.");
