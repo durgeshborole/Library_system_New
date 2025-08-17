@@ -505,37 +505,12 @@ function decodeBarcode(barcode) {
 
     department = departments[departmentCode] || "Unknown";
 
-   
-
-    // Determine year of study based on enrollment type
-    if (enrollTypeCode === "10") { // Regular 4-year program
-      if (admissionYearCode < 0) {
-        year = "First Year"; // A new student's year should be first year
-      } else if (admissionYearCode === 0) {
-        year = "First Year";
-      } else if (admissionYearCode === 1) {
-        year = "Second Year";
-      } else if (admissionYearCode === 2) {
-        year = "Third Year";
-      } else if (admissionYearCode === 3) {
-        year = "Final Year";
-      } else {
-        // If they have been enrolled for more than 4 years, they are considered graduated.
-        year = "Graduated";
-      }
-    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY) 3-year program
-      if (admissionYearCode < 0) {
-        year = "Second Year"; // A new DSY student's year should be second year
-      } else if (admissionYearCode === 0) {
-        year = "Second Year"; // DSY students start in the second year
-      } else if (admissionYearCode === 1) {
-        year = "Third Year";
-      } else if (admissionYearCode === 2) {
-        year = "Final Year";
-      } else {
-        // If they have been enrolled for more than 3 years, they are considered graduated.
-        year = "Graduated";
-      }
+    // Determine the base year of study based on enrollment type.
+    // The promotion system will update this based on the database.
+    if (enrollTypeCode === "10") { 
+      year = "First Year"; 
+    } else if (enrollTypeCode === "20") { 
+      year = "Second Year"; 
     } else {
       year = "Unknown Enrollment Type";
     }
@@ -548,7 +523,6 @@ function decodeBarcode(barcode) {
     designation
   };
 }
-
 
 async function decodeBarcodeWithPromotion(barcode) {
   const decoded = decodeBarcode(barcode);
