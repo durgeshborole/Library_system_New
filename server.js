@@ -405,18 +405,18 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
             try {
                 // Get ALL student barcodes from the database
                 const allStudentStatuses = await AcademicStatus.find({});
-                const allStudentBarcodes = allStudentStatuses.map(s => s.barcode);
+                const allStudentnames = allStudentStatuses.map(s => s.name);
 
                 // Determine which students should be promoted (i.e., not in the failed list)
-                const promotedBarcodes = allStudentBarcodes.filter(barcode => !failedBarcodes.includes(barcode));
+                const promotednames = allStudentnames.filter(name => !failednames.includes(name));
 
                 const studentUpdates = [];
                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
                 // Prepare updates only for the students who passed
-                for (const barcode of promotedBarcodes) {
-                    const student = allStudentStatuses.find(s => s.barcode === barcode);
+                for (const name of promotednames) {
+                    const student = allStudentStatuses.find(s => s.name === name);
                     if (student) {
                         const nextYear = yearMap.get(student.year) || student.year;
                         studentUpdates.push({
@@ -436,7 +436,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
 
                 res.status(200).json({ 
                     success: true, 
-                    message: `Academic year status updated. ${promotedCount} students have been promoted. ${failedBarcodes.length} students have been held back.`
+                    message: `Academic year status updated. ${promotedCount} students have been promoted. ${failednames.length} students have been held back.`
                 });
 
             } catch (error) {
