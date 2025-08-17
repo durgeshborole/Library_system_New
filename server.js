@@ -439,9 +439,7 @@ function decodeBarcode(barcode) {
 
     // Determine year of study based on enrollment type
     if (enrollTypeCode === "10") { // Regular 4-year program
-      if (yearsSinceAdmission < 0) {
-        year = "Pre-admission"; // Admission year is in the future
-      } else if (yearsSinceAdmission === 0) {
+      if (yearsSinceAdmission === 0) {
         year = "First Year";
       } else if (yearsSinceAdmission === 1) {
         year = "Second Year";
@@ -453,9 +451,7 @@ function decodeBarcode(barcode) {
         year = "Graduated";
       }
     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY) 3-year program
-      if (yearsSinceAdmission < 0) {
-        year = "Pre-admission";
-      } else if (yearsSinceAdmission === 0) {
+      if (yearsSinceAdmission === 0) {
         year = "Second Year"; // DSY students start in the second year
       } else if (yearsSinceAdmission === 1) {
         year = "Third Year";
