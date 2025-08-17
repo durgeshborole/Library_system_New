@@ -421,7 +421,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
                         const nextYear = yearMap.get(student.year) || student.year;
                         studentUpdates.push({
                             updateOne: {
-                                filter: { barcode: barcode },
+                                filter: { name: name },
                                 update: { $set: { year: nextYear } }
                             }
                         });
