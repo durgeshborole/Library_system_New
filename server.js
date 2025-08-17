@@ -254,61 +254,78 @@ const isHod = (req, res, next) => {
 };
 
 
-
 // app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
 //     if (!req.file) {
 //         return res.status(400).json({ message: "No CSV file uploaded." });
 //     }
 
-//     const failedNames = [];
+//     const failedBarcodes = [];
 //     const fileBuffer = req.file.buffer.toString('utf-8');
 //     const readableStream = require('stream').Readable.from(fileBuffer);
 
 //     readableStream
 //         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
 //         .on('data', (row) => {
-//             if (row.name) failedNames.push(row.name.trim());
+//             if (row.barcode) failedBarcodes.push(row.barcode.trim());
 //         })
 //         .on('end', async () => {
 //             try {
-//                 console.log("\n--- [Academic Update] Starting Diagnostic ---");
-//                 console.log("[Academic Update] 1. Names read from CSV:", failedNames);
+//                 // Get all students
+//                 const allStudents = await AcademicStatus.find({});
+//                 const studentUpdates = [];
 
-//                 const searchConditions = failedNames.map(name => {
-//                     const nameParts = name.split(/\s+/).filter(Boolean);
-//                     const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
-//                     return { $and: regexParts.map(regex => ({ name: regex })) };
-//                 });
-                
-//                 // ✅ ADDED: Log the exact query being sent to the database
-//                 console.log("[Academic Update] 2. Generated MongoDB Query:", JSON.stringify({ $or: searchConditions }, null, 2));
+//                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
+//                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
-//                 let failedVisitors = [];
-//                 if (searchConditions.length > 0) {
-//                     failedVisitors = await Visitor.find({ $or: searchConditions });
+//                 // Iterate through all students to determine their next year
+//                 for (const student of allStudents) {
+//                     // Check if the student is on the failed list
+//                     const isFailed = failedBarcodes.includes(student.barcode);
+                    
+//                     if (!isFailed) {
+//                         // If student is not on the failed list, promote them
+//                         const nextYear = yearMap.get(student.year) || student.year;
+//                         studentUpdates.push({
+//                             updateOne: {
+//                                 filter: { barcode: student.barcode },
+//                                 update: { $set: { year: nextYear } }
+//                             }
+//                         });
+//                     }
+//                     // If the student is on the failed list, we do nothing, so they stay in their current year.
 //                 }
-//                 const failedBarcodes = failedVisitors.map(visitor => visitor.barcode);
 
-//                 // ✅ ADDED: Log the names that were successfully found
-//                 console.log(`[Academic Update] 3. Found ${failedVisitors.length} matching students in DB:`, failedVisitors.map(v => v.name));
-
-//                 await AcademicStatus.updateMany({}, { $set: { isPromoted: true } });
-                
-//                 let result = { modifiedCount: 0 };
-//                 if (failedBarcodes.length > 0) {
-//                     result = await AcademicStatus.updateMany(
-//                         { barcode: { $in: failedBarcodes } },
-//                         { $set: { isPromoted: false } }
-//                     );
+//                 if (studentUpdates.length > 0) {
+//                     await AcademicStatus.bulkWrite(studentUpdates);
+//                     res.status(200).json({ success: true, message: `Academic year status updated. ${studentUpdates.length} students have been promoted.` });
+//                 } else {
+//                     res.status(200).json({ success: true, message: "No students were promoted." });
 //                 }
-                
-//                 console.log("--- [Academic Update] Finished ---");
-//                 res.status(200).json({ success: true, message: `Academic year status updated. Found ${failedBarcodes.length} matching students. ${result.modifiedCount} students have been held back.` });
 //             } catch (error) {
 //                 console.error("❌ Error processing failed list:", error);
 //                 res.status(500).json({ message: "Server error during academic update." });
 //             }
 //         });
+// });
+
+
+// // One-time route to fix existing student data
+// app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
+//     try {
+//         const allVisitors = await Visitor.find({}).select('barcode');
+//         const existingStatuses = await AcademicStatus.find({}).select('barcode');
+//         const existingBarcodes = new Set(existingStatuses.map(s => s.barcode));
+//         const missingStatuses = allVisitors.filter(v => v.barcode && !existingBarcodes.has(v.barcode));
+        
+//         if (missingStatuses.length === 0) {
+//             return res.send("All visitors already have an academic status. No fix needed.");
+//         }
+//         const newStatuses = missingStatuses.map(v => ({ barcode: v.barcode, isPromoted: true }));
+//         await AcademicStatus.insertMany(newStatuses, { ordered: false });
+//         res.send(`Successfully created ${newStatuses.length} missing academic status records. You can now run the promotion update.`);
+//     } catch (error) {
+//         res.status(500).send("An error occurred: " + error.message);
+//     }
 // });
 
 app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
@@ -364,26 +381,35 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
             }
         });
 });
-
-
 // One-time route to fix existing student data
 app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
     try {
         const allVisitors = await Visitor.find({}).select('barcode');
         const existingStatuses = await AcademicStatus.find({}).select('barcode');
         const existingBarcodes = new Set(existingStatuses.map(s => s.barcode));
-        const missingStatuses = allVisitors.filter(v => v.barcode && !existingBarcodes.has(v.barcode));
+        
+        // This maps over all visitors to find those that are students and don't yet have an academic status entry.
+        const missingStatuses = allVisitors
+            .map(v => {
+                const decoded = decodeBarcode(v.barcode);
+                return { barcode: v.barcode, year: decoded.year, isStudent: decoded.designation === "Student" };
+            })
+            .filter(v => v.isStudent && v.barcode && !existingBarcodes.has(v.barcode));
         
         if (missingStatuses.length === 0) {
             return res.send("All visitors already have an academic status. No fix needed.");
         }
-        const newStatuses = missingStatuses.map(v => ({ barcode: v.barcode, isPromoted: true }));
+        
+        // Create new academic status records with the correct initial year.
+        const newStatuses = missingStatuses.map(v => ({ barcode: v.barcode, year: v.year }));
         await AcademicStatus.insertMany(newStatuses, { ordered: false });
+        
         res.send(`Successfully created ${newStatuses.length} missing academic status records. You can now run the promotion update.`);
     } catch (error) {
         res.status(500).send("An error occurred: " + error.message);
     }
 });
+
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
 // ===================================================================
