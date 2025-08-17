@@ -328,6 +328,60 @@ const isHod = (req, res, next) => {
 //     }
 // });
 
+// app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
+//     if (!req.file) {
+//         return res.status(400).json({ message: "No CSV file uploaded." });
+//     }
+
+//     const failedBarcodes = [];
+//     const fileBuffer = req.file.buffer.toString('utf-8');
+//     const readableStream = require('stream').Readable.from(fileBuffer);
+
+//     readableStream
+//         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+//         .on('data', (row) => {
+//             if (row.barcode) failedBarcodes.push(row.barcode.trim());
+//         })
+//         .on('end', async () => {
+//             try {
+//                 // Get all students
+//                 const allStudents = await AcademicStatus.find({});
+//                 const studentUpdates = [];
+
+//                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
+//                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
+
+//                 // Iterate through all students to determine their next year
+//                 for (const student of allStudents) {
+//                     // Check if the student is on the failed list
+//                     const isFailed = failedBarcodes.includes(student.barcode);
+                    
+//                     if (!isFailed) {
+//                         // If student is not on the failed list, promote them
+//                         const nextYear = yearMap.get(student.year) || student.year;
+//                         studentUpdates.push({
+//                             updateOne: {
+//                                 filter: { barcode: student.barcode },
+//                                 update: { $set: { year: nextYear } }
+//                             }
+//                         });
+//                     }
+//                     // If the student is on the failed list, we do nothing, so they stay in their current year.
+//                 }
+
+//                 if (studentUpdates.length > 0) {
+//                     await AcademicStatus.bulkWrite(studentUpdates);
+//                     res.status(200).json({ success: true, message: `Academic year status updated. ${studentUpdates.length} students have been promoted.` });
+//                 } else {
+//                     res.status(200).json({ success: true, message: "No students were promoted." });
+//                 }
+//             } catch (error) {
+//                 console.error("❌ Error processing failed list:", error);
+//                 res.status(500).json({ message: "Server error during academic update." });
+//             }
+//         });
+// });
+
 app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: "No CSV file uploaded." });
@@ -340,48 +394,59 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
     readableStream
         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
         .on('data', (row) => {
-            if (row.barcode) failedBarcodes.push(row.barcode.trim());
+            // Check if the 'barcode' column exists and has a value, then trim and add to the list
+            if (row.barcode) {
+                failedBarcodes.push(row.barcode.trim());
+            } else {
+                console.warn("⚠️ Skipping a row in the CSV because the 'barcode' column is missing or empty.");
+            }
         })
         .on('end', async () => {
             try {
-                // Get all students
-                const allStudents = await AcademicStatus.find({});
-                const studentUpdates = [];
+                // Get ALL student barcodes from the database
+                const allStudentStatuses = await AcademicStatus.find({});
+                const allStudentBarcodes = allStudentStatuses.map(s => s.barcode);
 
+                // Determine which students should be promoted (i.e., not in the failed list)
+                const promotedBarcodes = allStudentBarcodes.filter(barcode => !failedBarcodes.includes(barcode));
+
+                const studentUpdates = [];
                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
-                // Iterate through all students to determine their next year
-                for (const student of allStudents) {
-                    // Check if the student is on the failed list
-                    const isFailed = failedBarcodes.includes(student.barcode);
-                    
-                    if (!isFailed) {
-                        // If student is not on the failed list, promote them
+                // Prepare updates only for the students who passed
+                for (const barcode of promotedBarcodes) {
+                    const student = allStudentStatuses.find(s => s.barcode === barcode);
+                    if (student) {
                         const nextYear = yearMap.get(student.year) || student.year;
                         studentUpdates.push({
                             updateOne: {
-                                filter: { barcode: student.barcode },
+                                filter: { barcode: barcode },
                                 update: { $set: { year: nextYear } }
                             }
                         });
                     }
-                    // If the student is on the failed list, we do nothing, so they stay in their current year.
                 }
 
+                let promotedCount = 0;
                 if (studentUpdates.length > 0) {
-                    await AcademicStatus.bulkWrite(studentUpdates);
-                    res.status(200).json({ success: true, message: `Academic year status updated. ${studentUpdates.length} students have been promoted.` });
-                } else {
-                    res.status(200).json({ success: true, message: "No students were promoted." });
+                    const result = await AcademicStatus.bulkWrite(studentUpdates);
+                    promotedCount = result.modifiedCount;
                 }
+
+                res.status(200).json({ 
+                    success: true, 
+                    message: `Academic year status updated. ${promotedCount} students have been promoted. ${failedBarcodes.length} students have been held back.`
+                });
+
             } catch (error) {
                 console.error("❌ Error processing failed list:", error);
                 res.status(500).json({ message: "Server error during academic update." });
             }
         });
 });
-// One-time route to fix existing student data
+
+
 app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
     try {
         const allVisitors = await Visitor.find({}).select('barcode');
@@ -449,55 +514,40 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 //     department = departments[departmentCode] || "Unknown";
 //     year = "N/A";
 
-//   // Check for Librarian
+//     // Check for Librarian
 //   } else if (designationPrefix === 'L') {
 //     designation = "Librarian";
 //     department = "Library";
 //     year = "N/A";
 
-//   // Check for Student
+//     // Check for Student (assuming student barcodes start with a number)
 //   } else if (!isNaN(parseInt(designationPrefix, 10))) {
 //     designation = "Student";
 
+//     // --- Student-Specific Decoding ---
 //     const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
 //     const departmentCode = barcode.charAt(2);
 //     const enrollTypeCode = barcode.slice(3, 5);
 
 //     department = departments[departmentCode] || "Unknown";
 
-//     // --- Automatic Year Calculation ---
-//     const now = new Date();
-//     let currentAcademicYear = now.getFullYear();
-//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
-
-//     // The academic year starts in July. If it's before July,
-//     // we are still in the previous academic year.
-//     if (currentMonth < 6) {
-//       currentAcademicYear--;
-//     }
-
-//     const admissionFullYear = 2000 + parseInt(admissionYearCode, 10);
-//     const admissionYearCode = currentAcademicYear - admissionFullYear;
-
-//     if (enrollTypeCode === "10") { // Regular 4-year program
-//       if (admissionYearCode < 0) year = "Pre-admission";
-//       else if (admissionYearCode === 0) year = "First Year";
-//       else if (admissionYearCode === 1) year = "Second Year";
-//       else if (admissionYearCode === 2) year = "Third Year";
-//       else if (admissionYearCode === 3) year = "Final Year";
-//       else year = "Graduated";
-//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
-//       if (admissionYearCode < 0) year = "Pre-admission";
-//       else if (admissionYearCode === 0) year = "Second Year";
-//       else if (admissionYearCode === 1) year = "Third Year";
-//       else if (admissionYearCode === 2) year = "Final Year";
-//       else year = "Graduated";
+//     // Determine the base year of study based on enrollment type.
+//     // The promotion system will update this based on the database.
+//     if (enrollTypeCode === "10") { 
+//       year = "First Year"; 
+//     } else if (enrollTypeCode === "20") { 
+//       year = "Second Year"; 
 //     } else {
 //       year = "Unknown Enrollment Type";
 //     }
 //   }
 
-//   return { year, department, designation };
+//   // Return the final decoded information
+//   return {
+//     year,
+//     department,
+//     designation
+//   };
 // }
 
 function decodeBarcode(barcode) {
@@ -570,34 +620,6 @@ function decodeBarcode(barcode) {
     designation
   };
 }
-
-// async function decodeBarcodeWithPromotion(barcode) {
-//   const decoded = decodeBarcode(barcode);
-
-//   if (decoded.designation !== "Student") return decoded;
-
-//   const status = await AcademicStatus.findOne({ barcode });
-
-//   if (status?.isPromoted === false) {
-//     const downgradeMap = {
-//       "Second Year": "First Year",
-//       "Third Year": "Second Year",
-//       "Final Year": "Third Year",
-//       "Graduated": "Final Year"
-//     };
-//     decoded.year = downgradeMap[decoded.year] || decoded.year;
-//   } else if (status?.isPromoted === true) {
-//     const upgradeMap = {
-//       "First Year": "Second Year",
-//       "Second Year": "Third Year",
-//       "Third Year": "Final Year",
-//       "Final Year": "Graduated"
-//     };
-//     decoded.year = upgradeMap[decoded.year] || decoded.year;
-//   }
-
-//   return decoded;
-// }
 
 async function decodeBarcodeWithPromotion(barcode) {
   // Get the base year from the pure decodeBarcode function
