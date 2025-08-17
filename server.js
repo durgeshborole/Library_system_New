@@ -405,23 +405,23 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
             try {
                 // Get ALL student barcodes from the database
                 const allStudentStatuses = await AcademicStatus.find({});
-                const allStudentnames = allStudentStatuses.map(s => s.name);
+                const allStudentBarcodes = allStudentStatuses.map(s => s.name);
 
                 // Determine which students should be promoted (i.e., not in the failed list)
-                const promotednames = allStudentnames.filter(name => !failednames.includes(name));
+                const promotedBarcodes = allStudentBarcodes.filter(name => !failednames.includes(name));
 
                 const studentUpdates = [];
                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
                 // Prepare updates only for the students who passed
-                for (const name of promotednames) {
-                    const student = allStudentStatuses.find(s => s.name === name);
+                for (const barcode of promotedBarcodes) {
+                    const student = allStudentStatuses.find(s => s.barcode === barcode);
                     if (student) {
                         const nextYear = yearMap.get(student.year) || student.year;
                         studentUpdates.push({
                             updateOne: {
-                                filter: { name: name },
+                                filter: { barcode : barcode },
                                 update: { $set: { year: nextYear } }
                             }
                         });
