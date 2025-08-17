@@ -387,7 +387,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         return res.status(400).json({ message: "No CSV file uploaded." });
     }
 
-    const failedBarcodes = [];
+    const failednames = [];
     const fileBuffer = req.file.buffer.toString('utf-8');
     const readableStream = require('stream').Readable.from(fileBuffer);
 
@@ -395,8 +395,8 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
         .on('data', (row) => {
             // Check if the 'barcode' column exists and has a value, then trim and add to the list
-            if (row.barcode) {
-                failedBarcodes.push(row.barcode.trim());
+            if (row.name) {
+                failednames.push(row.name.trim());
             } else {
                 console.warn("⚠️ Skipping a row in the CSV because the 'barcode' column is missing or empty.");
             }
