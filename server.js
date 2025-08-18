@@ -972,32 +972,70 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   const limit = parseInt(req.query.limit) || 20;
 //   const skip = (page - 1) * limit;
 //   const search = req.query.search?.toLowerCase() || "";
+//   const sortByName = parseInt(req.query.sortByName);
+//   const departmentFilter = req.query.department || "";
+
+//   function escapeRegex(text) {
+//     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+//   }
 
 //   try {
-//     const query = search
-//       ? {
+//     const query = {
+//       ...(search
+//         ? {
 //           $or: [
 //             { name: { $regex: search, $options: "i" } },
 //             { barcode: { $regex: search, $options: "i" } }
 //           ]
 //         }
-//       : {};
+//         : {}),
+//       ...(departmentFilter ? { department: departmentFilter } : {})
+//     };
+
+//     const sortObject = {};
+//     if (sortByName) {
+//       sortObject.name = sortByName;
+//     }
+
+
 
 //     const total = await Visitor.countDocuments(query);
-//     const visitors = await Visitor.find(query).skip(skip).limit(limit);
 
-//     const students = await Promise.all(visitors.map(async (visitor) => {
-//       const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
+//     // Fetch visitors with sorting applied
+//     const visitors = await Visitor.find(query)
+//       .skip(skip)
+//       .limit(limit)
+//       .sort(sortObject);
+
+//     // Get all barcodes from the current page of visitors
+//     const visitorBarcodes = visitors.map(v => v.barcode);
+
+//     // Fetch all academic statuses for these visitors in a single query
+//     const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
+//     const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
+
+//     const students = visitors.map(visitor => {
+//       let year;
+//       // Get the year from the fetched academic status or fall back to decoding
+//       if (academicStatusMap.has(visitor.barcode)) {
+//         year = academicStatusMap.get(visitor.barcode);
+//       } else {
+//         const decoded = decodeBarcode(visitor.barcode || "");
+//         year = decoded.year;
+//       }
+
+//       const decodedDepartment = decodeBarcode(visitor.barcode || "").department;
+
 //       return {
 //         name: visitor.name || "No Name",
 //         barcode: visitor.barcode || "No Barcode",
 //         photoBase64: visitor.photoUrl || null,
-//         department: decoded.department || "Unknown",
-//         year: decoded.year || "Unknown",
+//         department: decodedDepartment || "Unknown",
+//         year: year || "Unknown",
 //         email: visitor.email || "N/A",
 //         mobile: visitor.mobile || "N/A"
 //       };
-//     }));
+//     });
 
 //     res.status(200).json({
 //       students,
@@ -1015,59 +1053,57 @@ app.get('/students', async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
-  const sortByName = parseInt(req.query.sortByName);
-  const departmentFilter = req.query.department || "";
+  const sortByDepartment = parseInt(req.query.sortByDepartment);
+  const sortByName = parseInt(req.query.sortByName); // Retaining sortByName for completeness
 
   function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   try {
-    const query = {
-      ...(search
-        ? {
+    const escapedSearch = escapeRegex(search);
+
+    const query = search
+      ? {
           $or: [
-            { name: { $regex: search, $options: "i" } },
-            { barcode: { $regex: search, $options: "i" } }
+            { name: { $regex: escapedSearch, $options: "i" } },
+            { barcode: { $regex: escapedSearch, $options: "i" } }
           ]
         }
-        : {}),
-      ...(departmentFilter ? { department: departmentFilter } : {})
-    };
+      : {};
 
+    // Build the sort object dynamically based on user input
     const sortObject = {};
+    if (sortByDepartment) {
+      sortObject.department = sortByDepartment;
+    }
     if (sortByName) {
-      sortObject.name = sortByName;
+        sortObject.name = sortByName;
     }
 
 
-
     const total = await Visitor.countDocuments(query);
-
-    // Fetch visitors with sorting applied
+    
     const visitors = await Visitor.find(query)
       .skip(skip)
       .limit(limit)
       .sort(sortObject);
 
-    // Get all barcodes from the current page of visitors
     const visitorBarcodes = visitors.map(v => v.barcode);
 
-    // Fetch all academic statuses for these visitors in a single query
     const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
     const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
 
-    const students = visitors.map(visitor => {
+    const students = await Promise.all(visitors.map(async (visitor) => {
       let year;
-      // Get the year from the fetched academic status or fall back to decoding
       if (academicStatusMap.has(visitor.barcode)) {
         year = academicStatusMap.get(visitor.barcode);
       } else {
-        const decoded = decodeBarcode(visitor.barcode || "");
+        const decoded = await decodeBarcode(visitor.barcode || "");
         year = decoded.year;
       }
-
-      const decodedDepartment = decodeBarcode(visitor.barcode || "").department;
+      
+      const decodedDepartment = (await decodeBarcode(visitor.barcode || "")).department;
 
       return {
         name: visitor.name || "No Name",
@@ -1078,7 +1114,7 @@ app.get('/students', async (req, res) => {
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
-    });
+    }));
 
     res.status(200).json({
       students,
