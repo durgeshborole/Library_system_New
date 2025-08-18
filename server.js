@@ -539,7 +539,7 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 //   };
 // }
 
-const { Department, Designation } = require("./models/SystemConfig");
+
 
 async function decodeBarcode(barcode) {
   const unknownResult = {
