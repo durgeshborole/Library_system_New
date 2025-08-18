@@ -129,10 +129,9 @@ const DesignationSchema = new mongoose.Schema({
   name: { type: String, required: true } // e.g. "Faculty", "Librarian", "Research Scholar"
 });
 
-module.exports = {
-  Department: mongoose.model("Department", DepartmentSchema),
-  Designation: mongoose.model("Designation", DesignationSchema)
-};
+
+ 
+
 
 
 
@@ -171,6 +170,8 @@ const Hod = mongoose.model("Hod", HodSchema);
 const upload = multer({ storage });
 const Visitor = mongoose.model('Visitor', visitorSchema);
 const Log = mongoose.model('Log', logSchema);
+const Department =  mongoose.model("Department", DepartmentSchema);
+const Designation =  mongoose.model("Designation", DesignationSchema);
 
 
 const PrincipalSchema = new mongoose.Schema({
@@ -558,7 +559,7 @@ async function decodeBarcode(barcode) {
   let year = "N/A";
 
   // ✅ Lookup designation
-  const designationDoc = await DesignationSchema.findOne({ code: designationPrefix });
+  const designationDoc = await Designation.findOne({ code: designationPrefix });
   if (designationDoc) designation = designationDoc.name;
 
   // ✅ Faculty / Librarian / Research Scholar
