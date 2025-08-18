@@ -559,7 +559,7 @@ async function decodeBarcode(barcode) {
   let year = "N/A";
 
   // ✅ Lookup designation
-  const designationDoc = await DesignationSchema.findOne({ code: designationPrefix });
+  const designationDoc = await Designation.findOne({ code: designationPrefix });
   if (designationDoc) designation = designationDoc.name;
 
   // ✅ Faculty / Librarian / Research Scholar
