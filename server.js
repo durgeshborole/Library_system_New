@@ -1128,7 +1128,6 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 // });
 
 // server.js
-// server.js
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
