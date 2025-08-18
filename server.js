@@ -130,7 +130,7 @@ const DesignationSchema = new mongoose.Schema({
 });
 
 
- 
+
 
 
 
@@ -170,8 +170,8 @@ const Hod = mongoose.model("Hod", HodSchema);
 const upload = multer({ storage });
 const Visitor = mongoose.model('Visitor', visitorSchema);
 const Log = mongoose.model('Log', logSchema);
-const Department =  mongoose.model("Department", DepartmentSchema);
-const Designation =  mongoose.model("Designation", DesignationSchema);
+const Department = mongoose.model("Department", DepartmentSchema);
+const Designation = mongoose.model("Designation", DesignationSchema);
 
 
 const PrincipalSchema = new mongoose.Schema({
@@ -1018,6 +1018,9 @@ app.get('/students', async (req, res) => {
   const sortByName = parseInt(req.query.sortByName);
   const departmentFilter = req.query.department || "";
 
+  function escapeRegex(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
   try {
     const query = {
