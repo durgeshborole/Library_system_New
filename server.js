@@ -1008,71 +1008,111 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   }
 // });
 
+// app.get('/students', async (req, res) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 20;
+//   const skip = (page - 1) * limit;
+//   const search = req.query.search?.toLowerCase() || "";
+//   const sortByName = parseInt(req.query.sortByName);
+ 
+
+
+//   try {
+//     const query = {
+//       ...(search
+//         ? {
+//           $or: [
+//             { name: { $regex: search, $options: "i" } },
+//             { barcode: { $regex: search, $options: "i" } }
+//           ]
+//         }
+//         : {}),
+//       };
+
+//     const sortObject = {};
+//     if (sortByName) {
+//       sortObject.name = sortByName;
+//     }
+
+
+
+//     const total = await Visitor.countDocuments(query);
+
+//     // Fetch visitors with sorting applied
+//     const visitors = await Visitor.find(query)
+
+//     // Get all barcodes from the current page of visitors
+//     const visitorBarcodes = visitors.map(v => v.barcode);
+
+//     // Fetch all academic statuses for these visitors in a single query
+//     const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
+//     const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
+
+//     const students = visitors.map(visitor => {
+//       let year;
+//       // Get the year from the fetched academic status or fall back to decoding
+//       if (academicStatusMap.has(visitor.barcode)) {
+//         year = academicStatusMap.get(visitor.barcode);
+//       } else {
+//         const decoded = decodeBarcode(visitor.barcode || "");
+//         year = decoded.year;
+//       }
+
+      
+
+//       return {
+//         name: visitor.name || "No Name",
+//         barcode: visitor.barcode || "No Barcode",
+//         photoBase64: visitor.photoUrl || null,
+//         department: decodedDepartment || "Unknown",
+//         year: year || "Unknown",
+//         email: visitor.email || "N/A",
+//         mobile: visitor.mobile || "N/A"
+//       };
+//     });
+
+//     res.status(200).json({
+//       students,
+//       totalPages: Math.ceil(total / limit),
+//       currentPage: page
+//     });
+//   } catch (err) {
+//     console.error("❌ Error in /students:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
-  const sortByName = parseInt(req.query.sortByName);
- 
-
 
   try {
-    const query = {
-      ...(search
-        ? {
+    const query = search
+      ? {
           $or: [
             { name: { $regex: search, $options: "i" } },
             { barcode: { $regex: search, $options: "i" } }
           ]
         }
-        : {}),
-      };
-
-    const sortObject = {};
-    if (sortByName) {
-      sortObject.name = sortByName;
-    }
-
-
+      : {};
 
     const total = await Visitor.countDocuments(query);
+    const visitors = await Visitor.find(query).skip(skip).limit(limit);
 
-    // Fetch visitors with sorting applied
-    const visitors = await Visitor.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort(sortObject);
-
-    // Get all barcodes from the current page of visitors
-    const visitorBarcodes = visitors.map(v => v.barcode);
-
-    // Fetch all academic statuses for these visitors in a single query
-    const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
-    const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
-
-    const students = visitors.map(visitor => {
-      let year;
-      // Get the year from the fetched academic status or fall back to decoding
-      if (academicStatusMap.has(visitor.barcode)) {
-        year = academicStatusMap.get(visitor.barcode);
-      } else {
-        const decoded = decodeBarcode(visitor.barcode || "");
-        year = decoded.year;
-      }
-
-      
-
+    const students = await Promise.all(visitors.map(async (visitor) => {
+      const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
       return {
         name: visitor.name || "No Name",
         barcode: visitor.barcode || "No Barcode",
         photoBase64: visitor.photoUrl || null,
-        department: decodedDepartment || "Unknown",
-        year: year || "Unknown",
+        department: decoded.department || "Unknown",
+        year: decoded.year || "Unknown",
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
-    });
+    }));
 
     res.status(200).json({
       students,
@@ -1084,7 +1124,6 @@ app.get('/students', async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 // ===================================================================
 // START: NEW ENDPOINTS FOR UPDATING A VISITOR
