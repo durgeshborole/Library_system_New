@@ -182,6 +182,14 @@
     //     container.innerHTML = "<p>❌ Failed to load visitors.</p>";
     //   }
     // }
+    const deptMap = {
+      "Computer Science": "CSE",
+      "Mechanical": "ME",
+      "Civil": "CE",
+      "Electronics and Telecommunication": "E&TC",
+      "Electronics and Computer": "ECE"
+    };
+
 
     async function loadVisitors(page = 1, search = "", sortByName = "none", department = "") {
       const container = document.getElementById("visitorList");
@@ -209,9 +217,12 @@
         currentPage = data.currentPage || 1;
 
         // client-side filter (like analysis.js) – ensures it works even if backend ignores department
-        const filtered = department
-          ? visitors.filter(v => (v.department || "").toLowerCase().trim() === department.toLowerCase().trim())
+        const filterValue = deptMap[department] || department;
+
+        const filtered = filterValue
+          ? visitors.filter(v => (v.department || "").toLowerCase().trim() === filterValue.toLowerCase().trim())
           : visitors;
+
 
         if (filtered.length === 0) {
           container.innerHTML = "<p>No matching visitors found.</p>";
