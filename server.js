@@ -1131,9 +1131,9 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
-  const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
   const sortByName = parseInt(req.query.sortByName);
+  const departmentFilter = req.query.department || "";
 
   function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1141,8 +1141,7 @@ app.get('/students', async (req, res) => {
 
   try {
     const escapedSearch = escapeRegex(search);
-    
-    // The query object is built only for search. No department filtering here.
+
     const query = search
       ? {
         $or: [
@@ -1157,47 +1156,40 @@ app.get('/students', async (req, res) => {
       sortObject.name = sortByName;
     }
 
-    const total = await Visitor.countDocuments(query);
-    
-    // Fetch visitors with sorting and pagination.
-    const visitors = await Visitor.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort(sortObject);
+    // Step 1: Fetch all documents that match the search criteria.
+    // We fetch all to be able to apply the department filter on the server.
+    const visitors = await Visitor.find(query).sort(sortObject);
 
-    // Get all barcodes from the current page of visitors
-    const visitorBarcodes = visitors.map(v => v.barcode);
-
-    // Fetch all academic statuses for these visitors in a single query
-    const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
-    const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
-
-    const students = await Promise.all(visitors.map(async (visitor) => {
-      let year;
-      // Get the year from the fetched academic status or fall back to decoding
-      if (academicStatusMap.has(visitor.barcode)) {
-        year = academicStatusMap.get(visitor.barcode);
-      } else {
-        const decoded = await decodeBarcode(visitor.barcode || "");
-        year = decoded.year;
-      }
-      
-      const decodedDepartment = (await decodeBarcode(visitor.barcode || "")).department;
+    // Step 2: Decorate each visitor with decoded department and year info.
+    const decoratedVisitors = await Promise.all(visitors.map(async (visitor) => {
+      const decoded = await decodeBarcode(visitor.barcode || "");
+      const academicStatus = await AcademicStatus.findOne({ barcode: visitor.barcode });
 
       return {
         name: visitor.name || "No Name",
         barcode: visitor.barcode || "No Barcode",
         photoBase64: visitor.photoUrl || null,
-        department: decodedDepartment || "Unknown",
-        year: year || "Unknown",
+        department: decoded.department || "Unknown",
+        year: academicStatus?.year || decoded.year || "Unknown",
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
     }));
 
+    // Step 3: Apply the department filter to the decorated list.
+    const filteredVisitors = departmentFilter
+      ? decoratedVisitors.filter(v => v.department.toLowerCase() === departmentFilter.toLowerCase())
+      : decoratedVisitors;
+
+    const totalFiltered = filteredVisitors.length;
+    const totalPages = Math.ceil(totalFiltered / limit);
+
+    // Step 4: Apply pagination to the filtered list.
+    const paginatedVisitors = filteredVisitors.slice((page - 1) * limit, page * limit);
+
     res.status(200).json({
-      students,
-      totalPages: Math.ceil(total / limit),
+      students: paginatedVisitors,
+      totalPages: totalPages,
       currentPage: page
     });
   } catch (err) {
