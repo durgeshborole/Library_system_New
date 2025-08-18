@@ -53,10 +53,17 @@
     <div class="controls">
       <input id="searchInput" type="text" placeholder="🔍 Search by name or barcode..." class="search-input" />
       <div class="sort-container">
-        <label for="sortOrder">Sort by Name:</label>
-        <select id="sortOrder" class="sort-select">
-          <option value="name_asc"> From A to Z</option>
-          <option value="name_desc">From Z to A</option>
+        <label for="sortByName">Sort by Name:</label>
+        <select id="sortByName" class="sort-select">
+          <option value="none">Select</option>
+          <option value="asc">A-Z</option>
+          <option value="desc">Z-A</option>
+        </select>
+        <label for="sortByDepartment">Sort by Department:</label>
+        <select id="sortByDepartment" class="sort-select">
+          <option value="none">Select</option>
+          <option value="asc">From A to Z</option>
+          <option value="desc">From Z to A</option>
         </select>
       </div>
     </div>
@@ -81,20 +88,27 @@
     const limit = 20;
     let totalPages = 1;
     let currentSearch = "";
-    let currentSort = "name_asc"; // Default sort order
+    let sortByName = "none";
+    let sortByDepartment = "none";
 
-    async function loadVisitors(page = 1, search = "", sort = "name_asc") {
+    async function loadVisitors(page = 1, search = "", sortByName = "none", sortByDepartment = "none") {
       const container = document.getElementById("visitorList");
       const pageInfo = document.getElementById("pageInfo");
-      const sortSelect = document.getElementById("sortOrder");
 
       container.innerHTML = "<p>Loading...</p>";
 
       try {
         const cacheBuster = new Date().getTime();
-        const sortDirection = sort === "name_asc" ? 1 : -1;
         
-        const res = await fetch(`/students?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&sort=${sortDirection}&_=${cacheBuster}`);
+        let url = `/students?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&_=${cacheBuster}`;
+        if (sortByName !== "none") {
+            url += `&sortByName=${sortByName === 'asc' ? 1 : -1}`;
+        }
+        if (sortByDepartment !== "none") {
+            url += `&sortByDepartment=${sortByDepartment === 'asc' ? 1 : -1}`;
+        }
+
+        const res = await fetch(url);
         const data = await res.json();
 
         const visitors = data.students || [];
@@ -168,27 +182,34 @@
     document.getElementById("prevPage").onclick = () => {
       if (currentPage > 1) {
         currentPage--;
-        loadVisitors(currentPage, currentSearch, currentSort);
+        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
       }
     };
     document.getElementById("nextPage").onclick = () => {
       if (currentPage < totalPages) {
         currentPage++;
-        loadVisitors(currentPage, currentSearch, currentSort);
+        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
       }
     };
     document.getElementById("searchInput").addEventListener("input", () => {
       currentSearch = document.getElementById("searchInput").value;
       currentPage = 1;
-      loadVisitors(currentPage, currentSearch, currentSort);
+      loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
     });
 
-    // ✅ UPDATED: Sort dropdown event listener
-    document.getElementById("sortOrder").addEventListener("change", (event) => {
-        currentSort = event.target.value;
-        currentPage = 1; 
-        loadVisitors(currentPage, currentSearch, currentSort);
+    // Event listeners for the new sort dropdowns
+    document.getElementById("sortByName").addEventListener("change", (event) => {
+        sortByName = event.target.value;
+        currentPage = 1;
+        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
     });
+
+    document.getElementById("sortByDepartment").addEventListener("change", (event) => {
+        sortByDepartment = event.target.value;
+        currentPage = 1;
+        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+    });
+
 
     // Initial load
     window.onload = () => loadVisitors();
@@ -210,7 +231,7 @@
         const result = await res.json();
         if (result.success) {
           alert("✅ Visitor deleted successfully.");
-          loadVisitors(currentPage, currentSearch, currentSort);
+          loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
         } else {
           alert("❌ Deletion failed: " + result.message);
         }
