@@ -953,7 +953,6 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
   }
 });
 
-
 // app.get('/students', async (req, res) => {
 //   const page = parseInt(req.query.page) || 1;
 //   const limit = parseInt(req.query.limit) || 20;
@@ -963,28 +962,28 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   try {
 //     const query = search
 //       ? {
-//         $or: [
-//           { name: { $regex: search, $options: "i" } },
-//           { barcode: { $regex: search, $options: "i" } }
-//         ]
-//       }
+//           $or: [
+//             { name: { $regex: search, $options: "i" } },
+//             { barcode: { $regex: search, $options: "i" } }
+//           ]
+//         }
 //       : {};
 
 //     const total = await Visitor.countDocuments(query);
 //     const visitors = await Visitor.find(query).skip(skip).limit(limit);
 
-//     const students = visitors.map(visitor => {
-//       const decoded = decodeBarcode(visitor.barcode || "");
+//     const students = await Promise.all(visitors.map(async (visitor) => {
+//       const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
 //       return {
 //         name: visitor.name || "No Name",
 //         barcode: visitor.barcode || "No Barcode",
-//         photoBase64: visitor.photoUrl || null, // Direct photo from MongoDB
+//         photoBase64: visitor.photoUrl || null,
 //         department: decoded.department || "Unknown",
 //         year: decoded.year || "Unknown",
 //         email: visitor.email || "N/A",
 //         mobile: visitor.mobile || "N/A"
 //       };
-//     });
+//     }));
 
 //     res.status(200).json({
 //       students,
@@ -997,12 +996,12 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   }
 // });
 
-
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
+  const sort = parseInt(req.query.sort) || 1; // 1 for A-Z, -1 for Z-A
 
   try {
     const query = search
@@ -1015,7 +1014,7 @@ app.get('/students', async (req, res) => {
       : {};
 
     const total = await Visitor.countDocuments(query);
-    const visitors = await Visitor.find(query).skip(skip).limit(limit);
+    const visitors = await Visitor.find(query).skip(skip).limit(limit).sort({ name: sort });
 
     const students = await Promise.all(visitors.map(async (visitor) => {
       const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
@@ -1040,7 +1039,6 @@ app.get('/students', async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 // ===================================================================
 // START: NEW ENDPOINTS FOR UPDATING A VISITOR
