@@ -253,81 +253,6 @@ const isHod = (req, res, next) => {
   next();
 };
 
-
-// app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
-//     if (!req.file) {
-//         return res.status(400).json({ message: "No CSV file uploaded." });
-//     }
-
-//     const failedBarcodes = [];
-//     const fileBuffer = req.file.buffer.toString('utf-8');
-//     const readableStream = require('stream').Readable.from(fileBuffer);
-
-//     readableStream
-//         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
-//         .on('data', (row) => {
-//             if (row.barcode) failedBarcodes.push(row.barcode.trim());
-//         })
-//         .on('end', async () => {
-//             try {
-//                 // Get all students
-//                 const allStudents = await AcademicStatus.find({});
-//                 const studentUpdates = [];
-
-//                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
-//                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
-
-//                 // Iterate through all students to determine their next year
-//                 for (const student of allStudents) {
-//                     // Check if the student is on the failed list
-//                     const isFailed = failedBarcodes.includes(student.barcode);
-                    
-//                     if (!isFailed) {
-//                         // If student is not on the failed list, promote them
-//                         const nextYear = yearMap.get(student.year) || student.year;
-//                         studentUpdates.push({
-//                             updateOne: {
-//                                 filter: { barcode: student.barcode },
-//                                 update: { $set: { year: nextYear } }
-//                             }
-//                         });
-//                     }
-//                     // If the student is on the failed list, we do nothing, so they stay in their current year.
-//                 }
-
-//                 if (studentUpdates.length > 0) {
-//                     await AcademicStatus.bulkWrite(studentUpdates);
-//                     res.status(200).json({ success: true, message: `Academic year status updated. ${studentUpdates.length} students have been promoted.` });
-//                 } else {
-//                     res.status(200).json({ success: true, message: "No students were promoted." });
-//                 }
-//             } catch (error) {
-//                 console.error("❌ Error processing failed list:", error);
-//                 res.status(500).json({ message: "Server error during academic update." });
-//             }
-//         });
-// });
-
-
-// // One-time route to fix existing student data
-// app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (req, res) => {
-//     try {
-//         const allVisitors = await Visitor.find({}).select('barcode');
-//         const existingStatuses = await AcademicStatus.find({}).select('barcode');
-//         const existingBarcodes = new Set(existingStatuses.map(s => s.barcode));
-//         const missingStatuses = allVisitors.filter(v => v.barcode && !existingBarcodes.has(v.barcode));
-        
-//         if (missingStatuses.length === 0) {
-//             return res.send("All visitors already have an academic status. No fix needed.");
-//         }
-//         const newStatuses = missingStatuses.map(v => ({ barcode: v.barcode, isPromoted: true }));
-//         await AcademicStatus.insertMany(newStatuses, { ordered: false });
-//         res.send(`Successfully created ${newStatuses.length} missing academic status records. You can now run the promotion update.`);
-//     } catch (error) {
-//         res.status(500).send("An error occurred: " + error.message);
-//     }
-// });
-
 // app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUpload.single('failedListCsv'), async (req, res) => {
 //     if (!req.file) {
 //         return res.status(400).json({ message: "No CSV file uploaded." });
@@ -493,7 +418,6 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
 // ===================================================================
-
 // function decodeBarcode(barcode) {
 //   // --- Default values and basic validation ---
 //   const unknownResult = {
@@ -617,12 +541,32 @@ function decodeBarcode(barcode) {
 
     department = departments[departmentCode] || "Unknown";
 
-    // Determine the base year of study based on enrollment type.
-    // The promotion system will update this based on the database.
-    if (enrollTypeCode === "10") { 
-      year = "First Year"; 
-    } else if (enrollTypeCode === "20") { 
-      year = "Second Year"; 
+    // ✅ NEW LOGIC: Calculate the student's year based on admission year
+    const now = new Date();
+    let currentAcademicYear = now.getFullYear() % 100; // Get last two digits of current year
+    const currentMonth = now.getMonth(); // 0 = January, 6 = July
+
+    // The academic year typically starts in a specific month, let's assume July (month 6).
+    if (currentMonth < 6) {
+      currentAcademicYear--;
+    }
+    
+    // Calculate years passed since admission
+    const yearsSinceAdmission = currentAcademicYear - parseInt(admissionYearCode, 10);
+    
+    if (yearsSinceAdmission < 0) {
+      // If admission year is in the future, don't assign a year. Default "N/A" is used.
+    } else if (enrollTypeCode === "10") { // Regular 4-year program
+      if (yearsSinceAdmission === 0) year = "First Year";
+      else if (yearsSinceAdmission === 1) year = "Second Year";
+      else if (yearsSinceAdmission === 2) year = "Third Year";
+      else if (yearsSinceAdmission === 3) year = "Final Year";
+      else year = "Graduated";
+    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+      if (yearsSinceAdmission === 0) year = "Second Year";
+      else if (yearsSinceAdmission === 1) year = "Third Year";
+      else if (yearsSinceAdmission === 2) year = "Final Year";
+      else year = "Graduated";
     } else {
       year = "Unknown Enrollment Type";
     }
