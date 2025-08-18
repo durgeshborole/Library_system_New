@@ -258,45 +258,51 @@ const isHod = (req, res, next) => {
 //         return res.status(400).json({ message: "No CSV file uploaded." });
 //     }
 
-//     const failednames = [];
+//     const failedNames = [];
 //     const fileBuffer = req.file.buffer.toString('utf-8');
 //     const readableStream = require('stream').Readable.from(fileBuffer);
 
 //     readableStream
 //         .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
 //         .on('data', (row) => {
-//             // Check if the 'barcode' column exists and has a value, then trim and add to the list
+//             // Check if the 'name' column exists and has a value, then trim and add to the list
 //             if (row.name) {
-//                 failednames.push(row.name.trim());
+//                 failedNames.push(row.name.trim());
 //             } else {
-//                 console.warn("⚠️ Skipping a row in the CSV because the 'barcode' column is missing or empty.");
+//                 console.warn("⚠️ Skipping a row in the CSV because the 'name' column is missing or empty.");
 //             }
 //         })
 //         .on('end', async () => {
 //             try {
-//                 // Get ALL student barcodes from the database
+//                 // Find all visitors who match the names in the CSV to get their barcodes
+//                 const failedVisitors = await Visitor.find({ name: { $in: failedNames } }).select('barcode');
+//                 const failedBarcodes = failedVisitors.map(v => v.barcode);
+                
+//                 // Get ALL student statuses from the database
 //                 const allStudentStatuses = await AcademicStatus.find({});
-//                 const allStudentBarcodes = allStudentStatuses.map(s => s.name);
-
-//                 // Determine which students should be promoted (i.e., not in the failed list)
-//                 const promotedBarcodes = allStudentBarcodes.filter(name => !failednames.includes(name));
-
 //                 const studentUpdates = [];
+
 //                 const yearOrder = ["First Year", "Second Year", "Third Year", "Final Year", "Graduated"];
 //                 const yearMap = new Map(yearOrder.map((year, index) => [year, yearOrder[index + 1]]));
 
-//                 // Prepare updates only for the students who passed
-//                 for (const barcode of promotedBarcodes) {
-//                     const student = allStudentStatuses.find(s => s.barcode === barcode);
-//                     if (student) {
+//                 // Prepare updates only for the students who passed (i.e., not in the failed list)
+//                 for (const student of allStudentStatuses) {
+//                     // Use a Set for efficient lookup of failed barcodes
+//                     const isFailed = new Set(failedBarcodes).has(student.barcode);
+                    
+//                     if (!isFailed) {
+//                         // If student is not on the failed list, promote them
 //                         const nextYear = yearMap.get(student.year) || student.year;
-//                         studentUpdates.push({
-//                             updateOne: {
-//                                 filter: { barcode : barcode },
-//                                 update: { $set: { year: nextYear } }
-//                             }
-//                         });
+//                         if (nextYear !== student.year) {
+//                             studentUpdates.push({
+//                                 updateOne: {
+//                                     filter: { barcode: student.barcode },
+//                                     update: { $set: { year: nextYear } }
+//                                 }
+//                             });
+//                         }
 //                     }
+//                     // If the student is on the failed list, we do nothing, so they stay in their current year.
 //                 }
 
 //                 let promotedCount = 0;
@@ -307,7 +313,7 @@ const isHod = (req, res, next) => {
 
 //                 res.status(200).json({ 
 //                     success: true, 
-//                     message: `Academic year status updated. ${promotedCount} students have been promoted. ${failednames.length} students have been held back.`
+//                     message: `Academic year status updated. ${promotedCount} students have been promoted. ${failedNames.length} students have been held back.`
 //                 });
 
 //             } catch (error) {
@@ -339,9 +345,21 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
         .on('end', async () => {
             try {
                 // Find all visitors who match the names in the CSV to get their barcodes
-                const failedVisitors = await Visitor.find({ name: { $in: failedNames } }).select('barcode');
-                const failedBarcodes = failedVisitors.map(v => v.barcode);
+                // We use a flexible regex to handle name order variations
+                const searchConditions = failedNames.map(name => {
+                    const nameParts = name.split(/\s+/).filter(Boolean);
+                    const regexParts = nameParts.map(part => new RegExp(part, 'i')); 
+                    return { $and: regexParts.map(regex => ({ name: regex })) };
+                });
                 
+                let failedVisitors = [];
+                if (searchConditions.length > 0) {
+                    failedVisitors = await Visitor.find({ $or: searchConditions });
+                }
+                
+                const failedBarcodes = failedVisitors.map(v => v.barcode);
+                const failedBarcodesSet = new Set(failedBarcodes);
+
                 // Get ALL student statuses from the database
                 const allStudentStatuses = await AcademicStatus.find({});
                 const studentUpdates = [];
@@ -351,10 +369,7 @@ app.post('/api/admin/upload-failed-list', authenticateToken, isAdmin, memoryUplo
 
                 // Prepare updates only for the students who passed (i.e., not in the failed list)
                 for (const student of allStudentStatuses) {
-                    // Use a Set for efficient lookup of failed barcodes
-                    const isFailed = new Set(failedBarcodes).has(student.barcode);
-                    
-                    if (!isFailed) {
+                    if (!failedBarcodesSet.has(student.barcode)) {
                         // If student is not on the failed list, promote them
                         const nextYear = yearMap.get(student.year) || student.year;
                         if (nextYear !== student.year) {
