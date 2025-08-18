@@ -1018,11 +1018,11 @@ app.get('/students', async (req, res) => {
       ...(departmentFilter ? { department: departmentFilter } : {})
     };
 
-
     const sortObject = {};
     if (sortByName) {
       sortObject.name = sortByName;
     }
+
 
 
     const total = await Visitor.countDocuments(query);

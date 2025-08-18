@@ -107,19 +107,21 @@
         if (sortByName !== "none") {
           url += `&sortByName=${sortByName === 'asc' ? 1 : -1}`;
         }
-        if (sortByDepartment !== "" && sortByDepartment !== "none") {
-          url += `&department=${encodeURIComponent(sortByDepartment)}`;
+        if (departmentFilter.value) {
+          url += `&department=${encodeURIComponent(departmentFilter.value)}`;
         }
+
 
         function applyFilters() {
           const dept = departmentFilter.value;
-        
+
           const filtered = data.filter(entry => {
-            return (!dept || entry.department === dept)
+            return (!dept || entry.department === dept);
           });
 
           renderTable(filtered);
         }
+
 
 
         const res = await fetch(url);
