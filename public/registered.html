@@ -59,7 +59,7 @@
           <option value="asc">From A to Z</option>
           <option value="desc">From Z to A</option>
         </select>
-        <label for="sortByDepartment">Sort by Department:</label>
+        <label for="departmentFilter">Filter by Department:</label>
         <select id="departmentFilter">
           <option value="">All Departments</option>
           <option value="Computer Science">CSE</option>
@@ -68,6 +68,7 @@
           <option value="Electronics and Telecommunication">E&TC</option>
           <option value="Electronics and Computer">ECE</option>
         </select>
+
       </div>
     </div>
 
@@ -92,9 +93,89 @@
     let totalPages = 1;
     let currentSearch = "";
     let sortByName = "none";
-    let sortByDepartment = "none";
 
-    async function loadVisitors(page = 1, search = "", sortByName = "none", sortByDepartment = "none") {
+    let selectedDepartment = "";
+
+    // async function loadVisitors(page = 1, search = "", sortByName = "none", departmentFilter = "none") {
+    //   const container = document.getElementById("visitorList");
+    //   const pageInfo = document.getElementById("pageInfo");
+
+    //   container.innerHTML = "<p>Loading...</p>";
+
+    //   try {
+    //     const cacheBuster = new Date().getTime();
+
+    //     let url = `/students?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&_=${cacheBuster}`;
+    //     if (sortByName !== "none") {
+    //       url += `&sortByName=${sortByName === 'asc' ? 1 : -1}`;
+    //     }
+    //     if (departmentFilter.value) {
+    //       url += `&department=${encodeURIComponent(departmentFilter.value)}`;
+    //     }
+
+
+    //     function applyFilters() {
+    //       const dept = departmentFilter.value;
+
+    //       const filtered = data.filter(entry => {
+    //         return (!dept || entry.department === dept);
+    //       });
+
+    //       renderTable(filtered);
+    //     }
+
+
+
+    //     const res = await fetch(url);
+    //     const data = await res.json();
+
+    //     const visitors = data.students || [];
+    //     totalPages = data.totalPages || 1;
+    //     currentPage = data.currentPage || 1;
+
+    //     if (visitors.length === 0) {
+    //       container.innerHTML = "<p>No matching visitors found.</p>";
+    //       pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    //       return;
+    //     }
+
+    //     container.innerHTML = "";
+    //     visitors.forEach(visitor => {
+    //       const div = document.createElement("div");
+    //       div.className = "visitor-card-full";
+    //       div.innerHTML = `
+    //         <img src="${visitor.photoBase64 || './images/default.jpg'}" alt="Photo of ${visitor.name}" class="visitor-photo">
+    //         <div class="visitor-details">
+    //           <h3>${visitor.name}</h3>
+    //           <p><strong>Barcode:</strong> ${visitor.barcode}</p>
+    //           <p><strong>Email:</strong> ${visitor.email}</p>
+    //           <p><strong>Mobile:</strong> ${visitor.mobile}</p>
+    //           <p><strong>Department:</strong> ${visitor.department}</p>
+    //           <p><strong>Year:</strong> ${visitor.year}</p>
+    //         </div>
+    //         <div class="visitor-actions">
+    //           <button class="action-btn">⋮</button>
+    //           <div class="action-dropdown">
+    //             <a href="#" onclick="updateVisitor('${visitor.barcode}')">Update</a>
+    //             <a href="#" onclick="deleteVisitor('${visitor.barcode}', '${visitor.name}')">Delete</a>
+    //           </div>
+    //         </div>
+    //       `;
+    //       container.appendChild(div);
+    //     });
+
+    //     pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    //     document.getElementById("prevPage").disabled = currentPage === 1;
+    //     document.getElementById("nextPage").disabled = currentPage === totalPages;
+
+    //   } catch (err) {
+    //     console.error(err);
+    //     container.innerHTML = "<p>❌ Failed to load visitors.</p>";
+    //   }
+    // }
+
+    async function loadVisitors(page = 1, search = "", sortByName = "none", department = "") {
       const container = document.getElementById("visitorList");
       const pageInfo = document.getElementById("pageInfo");
 
@@ -107,22 +188,10 @@
         if (sortByName !== "none") {
           url += `&sortByName=${sortByName === 'asc' ? 1 : -1}`;
         }
-        if (departmentFilter.value) {
-          url += `&department=${encodeURIComponent(departmentFilter.value)}`;
+        // pass department to backend if present
+        if (department) {
+          url += `&department=${encodeURIComponent(department)}`;
         }
-
-
-        function applyFilters() {
-          const dept = departmentFilter.value;
-
-          const filtered = data.filter(entry => {
-            return (!dept || entry.department === dept);
-          });
-
-          renderTable(filtered);
-        }
-
-
 
         const res = await fetch(url);
         const data = await res.json();
@@ -131,39 +200,43 @@
         totalPages = data.totalPages || 1;
         currentPage = data.currentPage || 1;
 
-        if (visitors.length === 0) {
+        // client-side filter (like analysis.js) – ensures it works even if backend ignores department
+        const filtered = department
+          ? visitors.filter(v => (v.department || "").toLowerCase().trim() === department.toLowerCase().trim())
+          : visitors;
+
+        if (filtered.length === 0) {
           container.innerHTML = "<p>No matching visitors found.</p>";
           pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
           return;
         }
 
         container.innerHTML = "";
-        visitors.forEach(visitor => {
+        filtered.forEach(visitor => {
           const div = document.createElement("div");
           div.className = "visitor-card-full";
           div.innerHTML = `
-            <img src="${visitor.photoBase64 || './images/default.jpg'}" alt="Photo of ${visitor.name}" class="visitor-photo">
-            <div class="visitor-details">
-              <h3>${visitor.name}</h3>
-              <p><strong>Barcode:</strong> ${visitor.barcode}</p>
-              <p><strong>Email:</strong> ${visitor.email}</p>
-              <p><strong>Mobile:</strong> ${visitor.mobile}</p>
-              <p><strong>Department:</strong> ${visitor.department}</p>
-              <p><strong>Year:</strong> ${visitor.year}</p>
-            </div>
-            <div class="visitor-actions">
-              <button class="action-btn">⋮</button>
-              <div class="action-dropdown">
-                <a href="#" onclick="updateVisitor('${visitor.barcode}')">Update</a>
-                <a href="#" onclick="deleteVisitor('${visitor.barcode}', '${visitor.name}')">Delete</a>
-              </div>
-            </div>
-          `;
+        <img src="${visitor.photoBase64 || './images/default.jpg'}" alt="Photo of ${visitor.name}" class="visitor-photo">
+        <div class="visitor-details">
+          <h3>${visitor.name}</h3>
+          <p><strong>Barcode:</strong> ${visitor.barcode}</p>
+          <p><strong>Email:</strong> ${visitor.email}</p>
+          <p><strong>Mobile:</strong> ${visitor.mobile}</p>
+          <p><strong>Department:</strong> ${visitor.department}</p>
+          <p><strong>Year:</strong> ${visitor.year}</p>
+        </div>
+        <div class="visitor-actions">
+          <button class="action-btn">⋮</button>
+          <div class="action-dropdown">
+            <a href="#" onclick="updateVisitor('${visitor.barcode}')">Update</a>
+            <a href="#" onclick="deleteVisitor('${visitor.barcode}', '${visitor.name}')">Delete</a>
+          </div>
+        </div>
+      `;
           container.appendChild(div);
         });
 
         pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-
         document.getElementById("prevPage").disabled = currentPage === 1;
         document.getElementById("nextPage").disabled = currentPage === totalPages;
 
@@ -172,6 +245,7 @@
         container.innerHTML = "<p>❌ Failed to load visitors.</p>";
       }
     }
+
 
     // --- SCRIPT FOR CLICKABLE DROPDOWN ---
     document.getElementById('visitorList').addEventListener('click', function (event) {
@@ -198,32 +272,32 @@
     document.getElementById("prevPage").onclick = () => {
       if (currentPage > 1) {
         currentPage--;
-        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+        loadVisitors(currentPage, currentSearch, sortByName, depar);
       }
     };
     document.getElementById("nextPage").onclick = () => {
       if (currentPage < totalPages) {
         currentPage++;
-        loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+        loadVisitors(currentPage, currentSearch, sortByName, departmentFilter);
       }
     };
     document.getElementById("searchInput").addEventListener("input", () => {
       currentSearch = document.getElementById("searchInput").value;
       currentPage = 1;
-      loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+      loadVisitors(currentPage, currentSearch, sortByName, departmentFilter);
     });
 
     // Event listeners for the new sort dropdowns
     document.getElementById("sortByName").addEventListener("change", (event) => {
       sortByName = event.target.value;
       currentPage = 1;
-      loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+      loadVisitors(currentPage, currentSearch, sortByName, departmentFilter);
     });
 
-    document.getElementById("sortByDepartment").addEventListener("change", (event) => {
-      sortByDepartment = event.target.value;
+    document.getElementById("departmentFilter").addEventListener("change", (event) => {
+      selectedDepartment = event.target.value || "";
       currentPage = 1;
-      loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+      loadVisitors(currentPage, currentSearch, sortByName, selectedDepartment);
     });
 
 
@@ -247,7 +321,7 @@
         const result = await res.json();
         if (result.success) {
           alert("✅ Visitor deleted successfully.");
-          loadVisitors(currentPage, currentSearch, sortByName, sortByDepartment);
+          loadVisitors(currentPage, currentSearch, sortByName, departmentFilter);
         } else {
           alert("❌ Deletion failed: " + result.message);
         }
