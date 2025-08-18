@@ -267,3 +267,90 @@ async function loadMonthlyAwards() {
     resultBox.innerHTML = "❌ Server error.";
   }
 }
+
+async function addDepartment() {
+  const code = document.getElementById("deptCode").value;
+  const name = document.getElementById("deptName").value;
+  await fetch("/api/departments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, name })
+  });
+  alert("Department added");
+}
+
+async function addDesignation() {
+  const code = document.getElementById("desgCode").value;
+  const name = document.getElementById("desgName").value;
+  await fetch("/api/designations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, name })
+  });
+  alert("Designation added");
+}
+
+const deptForm = document.getElementById("addDeptForm");
+deptForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = document.getElementById("deptCode").value;
+  const name = document.getElementById("deptName").value;
+  const res = await fetch("/api/departments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, name })
+  });
+  const data = await res.json();
+  alert(data.message);
+  loadDepartments();
+});
+
+// Add Designation
+const desgForm = document.getElementById("addDesgForm");
+desgForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = document.getElementById("desgCode").value;
+  const name = document.getElementById("desgName").value;
+  const res = await fetch("/api/designations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, name })
+  });
+  const data = await res.json();
+  alert(data.message);
+  loadDesignations();
+});
+
+// Load Departments
+async function loadDepartments() {
+  const res = await fetch("/api/departments");
+  const depts = await res.json();
+  const dropdown = document.getElementById("departmentDropdown");
+  dropdown.innerHTML = "";
+  depts.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.code;
+    opt.textContent = d.name;
+    dropdown.appendChild(opt);
+  });
+}
+
+// Load Designations
+async function loadDesignations() {
+  const res = await fetch("/api/designations");
+  const desgs = await res.json();
+  const dropdown = document.getElementById("designationDropdown");
+  dropdown.innerHTML = "";
+  desgs.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.code;
+    opt.textContent = d.name;
+    dropdown.appendChild(opt);
+  });
+}
+
+// Call these on page load
+window.onload = () => {
+  loadDepartments();
+  loadDesignations();
+};

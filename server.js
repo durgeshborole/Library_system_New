@@ -119,6 +119,20 @@ const storage = multer.diskStorage({
   }
 });
 
+const DepartmentSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true }, // e.g. "3"
+  name: { type: String, required: true } // e.g. "Computer Science"
+});
+
+const DesignationSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true }, // e.g. "F", "L", "R"
+  name: { type: String, required: true } // e.g. "Faculty", "Librarian", "Research Scholar"
+});
+
+module.exports = {
+  Department: mongoose.model("Department", DepartmentSchema),
+  Designation: mongoose.model("Designation", DesignationSchema)
+};
 
 
 
@@ -433,6 +447,7 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 // ===================================================================
 // END: AUTHENTICATION AND AUTHORIZATION MIDDLEWARE
 // ===================================================================
+
 // function decodeBarcode(barcode) {
 //   // --- Default values and basic validation ---
 //   const unknownResult = {
@@ -485,12 +500,32 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 
 //     department = departments[departmentCode] || "Unknown";
 
-//     // Determine the base year of study based on enrollment type.
-//     // The promotion system will update this based on the database.
-//     if (enrollTypeCode === "10") { 
-//       year = "First Year"; 
-//     } else if (enrollTypeCode === "20") { 
-//       year = "Second Year"; 
+//     // ✅ NEW LOGIC: Calculate the student's year based on admission year
+//     const now = new Date();
+//     let currentAcademicYear = now.getFullYear() % 100; // Get last two digits of current year
+//     const currentMonth = now.getMonth(); // 0 = January, 6 = July
+
+//     // The academic year typically starts in a specific month, let's assume July (month 6).
+//     if (currentMonth < 6) {
+//       currentAcademicYear--;
+//     }
+
+//     // Calculate years passed since admission
+//     const yearsSinceAdmission = currentAcademicYear - parseInt(admissionYearCode, 10);
+
+//     if (yearsSinceAdmission < 0) {
+//       // If admission year is in the future, don't assign a year. Default "N/A" is used.
+//     } else if (enrollTypeCode === "10") { // Regular 4-year program
+//       if (yearsSinceAdmission === 0) year = "First Year";
+//       else if (yearsSinceAdmission === 1) year = "Second Year";
+//       else if (yearsSinceAdmission === 2) year = "Third Year";
+//       else if (yearsSinceAdmission === 3) year = "Final Year";
+//       else year = "Graduated";
+//     } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+//       if (yearsSinceAdmission === 0) year = "Second Year";
+//       else if (yearsSinceAdmission === 1) year = "Third Year";
+//       else if (yearsSinceAdmission === 2) year = "Final Year";
+//       else year = "Graduated";
 //     } else {
 //       year = "Unknown Enrollment Type";
 //     }
@@ -504,96 +539,74 @@ app.get('/api/admin/fix-academic-statuses', authenticateToken, isAdmin, async (r
 //   };
 // }
 
-function decodeBarcode(barcode) {
-  // --- Default values and basic validation ---
+const { Department, Designation } = require("./models/SystemConfig");
+
+async function decodeBarcode(barcode) {
   const unknownResult = {
     year: "N/A",
     department: "Unknown",
-    designation: "Unknown"
+    designation: "Unknown",
   };
 
-  if (!barcode || typeof barcode !== 'string' || barcode.length < 5) {
+  if (!barcode || typeof barcode !== "string" || barcode.length < 5) {
     return unknownResult;
   }
 
-  // --- Data Mappings ---
-  const departments = {
-    '1': "Civil Engineering",
-    '2': "Mechanical Engineering",
-    '3': "Computer Science",
-    '4': "Electronics and Telecommunication",
-    '5': "Electronics and Computer",
-    'B': "Library",
-  };
-
-  // --- Extract Information based on Designation ---
   const designationPrefix = barcode.charAt(0).toUpperCase();
   let designation = "Unknown";
   let department = "Unknown";
   let year = "N/A";
 
-  // Check for Faculty
-  if (designationPrefix === 'F') {
-    designation = "Faculty";
-    const departmentCode = barcode.charAt(3);
-    department = departments[departmentCode] || "Unknown";
-    year = "N/A";
+  // ✅ Lookup designation
+  const designationDoc = await Designation.findOne({ code: designationPrefix });
+  if (designationDoc) designation = designationDoc.name;
 
-    // Check for Librarian
-  } else if (designationPrefix === 'L') {
-    designation = "Librarian";
-    department = "Library";
-    year = "N/A";
+  // ✅ Faculty / Librarian / Research Scholar
+  if (designation !== "Unknown" && designation !== "Student") {
+    const deptCode = barcode.charAt(3);
+    const deptDoc = await Department.findOne({ code: deptCode });
+    department = deptDoc ? deptDoc.name : "Unknown";
+    return { year, department, designation };
+  }
 
-    // Check for Student (assuming student barcodes start with a number)
-  } else if (!isNaN(parseInt(designationPrefix, 10))) {
+  // ✅ Student
+  if (!isNaN(parseInt(designationPrefix, 10))) {
     designation = "Student";
-
-    // --- Student-Specific Decoding ---
-    const admissionYearCode = barcode.slice(0, 2); // e.g., "25"
-    const departmentCode = barcode.charAt(2);
+    const admissionYearCode = barcode.slice(0, 2); // e.g. "22"
+    const deptCode = barcode.charAt(2);
     const enrollTypeCode = barcode.slice(3, 5);
+    studentId = barcode.slice(5);
 
-    department = departments[departmentCode] || "Unknown";
+    // find department dynamically
+    const deptDoc = await Department.findOne({ code: deptCode });
+    department = deptDoc ? deptDoc.name : "Unknown";
 
-    // ✅ NEW LOGIC: Calculate the student's year based on admission year
+    // academic year logic
     const now = new Date();
-    let currentAcademicYear = now.getFullYear() % 100; // Get last two digits of current year
-    const currentMonth = now.getMonth(); // 0 = January, 6 = July
+    let currentAcademicYear = now.getFullYear() % 100;
+    if (now.getMonth() < 6) currentAcademicYear--;
 
-    // The academic year typically starts in a specific month, let's assume July (month 6).
-    if (currentMonth < 6) {
-      currentAcademicYear--;
-    }
-
-    // Calculate years passed since admission
     const yearsSinceAdmission = currentAcademicYear - parseInt(admissionYearCode, 10);
 
-    if (yearsSinceAdmission < 0) {
-      // If admission year is in the future, don't assign a year. Default "N/A" is used.
-    } else if (enrollTypeCode === "10") { // Regular 4-year program
+    if (enrollTypeCode === "10") {
       if (yearsSinceAdmission === 0) year = "First Year";
       else if (yearsSinceAdmission === 1) year = "Second Year";
       else if (yearsSinceAdmission === 2) year = "Third Year";
       else if (yearsSinceAdmission === 3) year = "Final Year";
       else year = "Graduated";
-    } else if (enrollTypeCode === "20") { // Direct Second Year (DSY)
+    } else if (enrollTypeCode === "20") {
       if (yearsSinceAdmission === 0) year = "Second Year";
       else if (yearsSinceAdmission === 1) year = "Third Year";
       else if (yearsSinceAdmission === 2) year = "Final Year";
       else year = "Graduated";
-    } else {
-      year = "Unknown Enrollment Type";
     }
   }
 
-  // Return the final decoded information
-  return {
-    year,
-    department,
-    designation
-  };
+  return { year, department, designation };
 }
+
+
+
 
 async function decodeBarcodeWithPromotion(barcode) {
   // Get the base year from the pure decodeBarcode function
@@ -2123,18 +2136,40 @@ app.get('/api/reports', authenticateToken, isAdminOrPrincipal, async (req, res) 
   }
 });
 
-// const HOST ='192.168.1.198'
+app.post("/api/departments", async (req, res) => {
+  try {
+    const { code, name } = req.body;
+    const dept = new Department({ code, name });
+    await dept.save();
+    res.json({ success: true, message: "Department added", dept });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-// const HOST =process.env.HOST || 'localhost';
+// Get Departments
+app.get("/api/departments", async (req, res) => {
+  const depts = await Department.find();
+  res.json(depts);
+});
 
-// // Starts the server
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running aT https://${HOST}:${PORT}`);
-// });
+// Add Designation
+app.post("/api/designations", async (req, res) => {
+  try {
+    const { code, name } = req.body;
+    const desg = new Designation({ code, name });
+    await desg.save();
+    res.json({ success: true, message: "Designation added", desg });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running at https://localhost/${PORT}`);
-// });
+// Get Designations
+app.get("/api/designations", async (req, res) => {
+  const desgs = await Designation.find();
+  res.json(desgs);
+});
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running at port ${PORT}`);
