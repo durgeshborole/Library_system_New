@@ -1048,13 +1048,93 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   }
 // });
 
+// app.get('/students', async (req, res) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 20;
+//   const skip = (page - 1) * limit;
+//   const search = req.query.search?.toLowerCase() || "";
+//   const sortByDepartment = parseInt(req.query.sortByDepartment);
+//   const sortByName = parseInt(req.query.sortByName); // Retaining sortByName for completeness
+
+//   function escapeRegex(text) {
+//     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+//   }
+
+//   try {
+//     const escapedSearch = escapeRegex(search);
+
+//     const query = search
+//       ? {
+//           $or: [
+//             { name: { $regex: escapedSearch, $options: "i" } },
+//             { barcode: { $regex: escapedSearch, $options: "i" } }
+//           ]
+//         }
+//       : {};
+
+//     // Build the sort object dynamically based on user input
+//     const sortObject = {};
+//     if (sortByDepartment) {
+//       sortObject.department = sortByDepartment;
+//     }
+//     if (sortByName) {
+//         sortObject.name = sortByName;
+//     }
+
+
+//     const total = await Visitor.countDocuments(query);
+    
+//     const visitors = await Visitor.find(query)
+//       .skip(skip)
+//       .limit(limit)
+//       .sort(sortObject);
+
+//     const visitorBarcodes = visitors.map(v => v.barcode);
+
+//     const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
+//     const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
+
+//     const students = await Promise.all(visitors.map(async (visitor) => {
+//       let year;
+//       if (academicStatusMap.has(visitor.barcode)) {
+//         year = academicStatusMap.get(visitor.barcode);
+//       } else {
+//         const decoded = await decodeBarcode(visitor.barcode || "");
+//         year = decoded.year;
+//       }
+      
+//       const decodedDepartment = (await decodeBarcode(visitor.barcode || "")).department;
+
+//       return {
+//         name: visitor.name || "No Name",
+//         barcode: visitor.barcode || "No Barcode",
+//         photoBase64: visitor.photoUrl || null,
+//         department: decodedDepartment || "Unknown",
+//         year: year || "Unknown",
+//         email: visitor.email || "N/A",
+//         mobile: visitor.mobile || "N/A"
+//       };
+//     }));
+
+//     res.status(200).json({
+//       students,
+//       totalPages: Math.ceil(total / limit),
+//       currentPage: page
+//     });
+//   } catch (err) {
+//     console.error("❌ Error in /students:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// server.js
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
-  const sortByDepartment = parseInt(req.query.sortByDepartment);
-  const sortByName = parseInt(req.query.sortByName); // Retaining sortByName for completeness
+  const sortByName = parseInt(req.query.sortByName);
+  const departmentFilter = req.query.department || "";
 
   function escapeRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1065,60 +1145,55 @@ app.get('/students', async (req, res) => {
 
     const query = search
       ? {
-          $or: [
-            { name: { $regex: escapedSearch, $options: "i" } },
-            { barcode: { $regex: escapedSearch, $options: "i" } }
-          ]
-        }
+        $or: [
+          { name: { $regex: escapedSearch, $options: "i" } },
+          { barcode: { $regex: escapedSearch, $options: "i" } }
+        ]
+      }
       : {};
 
-    // Build the sort object dynamically based on user input
     const sortObject = {};
-    if (sortByDepartment) {
-      sortObject.department = sortByDepartment;
-    }
     if (sortByName) {
-        sortObject.name = sortByName;
+      sortObject.name = sortByName;
     }
 
+    // Step 1: Fetch all visitors that match the search query, without department filtering.
+    // Fetch a large number of documents to ensure we have enough to filter down to a full page.
+    const visitorsWithDecodedInfo = (await Visitor.find(query).sort(sortObject))
+        .map(async (visitor) => {
+            const decoded = await decodeBarcode(visitor.barcode || "");
+            return {
+                ...visitor._doc,
+                department: decoded.department,
+                year: decoded.year,
+                designation: decoded.designation
+            };
+        });
 
-    const total = await Visitor.countDocuments(query);
-    
-    const visitors = await Visitor.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort(sortObject);
+    const resolvedVisitors = await Promise.all(visitorsWithDecodedInfo);
 
-    const visitorBarcodes = visitors.map(v => v.barcode);
+    // Step 2: Now filter by department on the server-side using the decoded department info.
+    const filteredVisitors = departmentFilter
+        ? resolvedVisitors.filter(v => v.department === departmentFilter)
+        : resolvedVisitors;
 
-    const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
-    const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
+    // Step 3: Apply pagination to the filtered list.
+    const paginatedVisitors = filteredVisitors.slice(skip, skip + limit);
+    const totalFiltered = filteredVisitors.length;
 
-    const students = await Promise.all(visitors.map(async (visitor) => {
-      let year;
-      if (academicStatusMap.has(visitor.barcode)) {
-        year = academicStatusMap.get(visitor.barcode);
-      } else {
-        const decoded = await decodeBarcode(visitor.barcode || "");
-        year = decoded.year;
-      }
-      
-      const decodedDepartment = (await decodeBarcode(visitor.barcode || "")).department;
-
-      return {
+    const studentData = paginatedVisitors.map(visitor => ({
         name: visitor.name || "No Name",
         barcode: visitor.barcode || "No Barcode",
         photoBase64: visitor.photoUrl || null,
-        department: decodedDepartment || "Unknown",
-        year: year || "Unknown",
+        department: visitor.department || "Unknown",
+        year: visitor.year || "Unknown",
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
-      };
     }));
 
     res.status(200).json({
-      students,
-      totalPages: Math.ceil(total / limit),
+      students: studentData,
+      totalPages: Math.ceil(totalFiltered / limit),
       currentPage: page
     });
   } catch (err) {
