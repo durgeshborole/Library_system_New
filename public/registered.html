@@ -111,6 +111,16 @@
           url += `&department=${encodeURIComponent(sortByDepartment)}`;
         }
 
+        function applyFilters() {
+          const dept = departmentFilter.value;
+        
+          const filtered = data.filter(entry => {
+            return (!dept || entry.department === dept)
+          });
+
+          renderTable(filtered);
+        }
+
 
         const res = await fetch(url);
         const data = await res.json();
