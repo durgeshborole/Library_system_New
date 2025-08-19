@@ -843,6 +843,46 @@ app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Admin: Add a new notice
+// app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
+//   const { text } = req.body;
+//   if (!text) return res.status(400).json({ error: 'Notice text required' });
+
+//   try {
+//     const newNotice = new Notice({ text });
+//     await newNotice.save();
+//     // This line is critical - it must include "success: true"
+//     res.status(201).json({ success: true, message: 'Notice posted successfully' });
+//   } catch (err) {
+//     console.error('Failed to save notice:', err);
+//     res.status(500).json({ error: 'Failed to save notice' });
+//   }
+// });
+
+// // Notice GET API
+// app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
+//   try {
+//     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
+//     res.status(200).json(notices);
+//   } catch (err) {
+//     console.error('Failed to fetch notices:', err);
+//     res.status(500).json({ error: 'Failed to load notices' });
+//   }
+// });
+
+// app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//     await Notice.findByIdAndDelete(id);
+//     res.status(200).json({ success: true, message: "Notice deleted successfully" });
+//   } catch (err) {
+//     console.error("Failed to delete notice:", err);
+//     res.status(500).json({ success: false, message: "Failed to delete notice" });
+//   }
+// });
+
+// in server.js
+
+// Admin: Add a new notice (Requires Admin Login)
 app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'Notice text required' });
@@ -850,16 +890,15 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
   try {
     const newNotice = new Notice({ text });
     await newNotice.save();
-    // This line is critical - it must include "success: true"
     res.status(201).json({ success: true, message: 'Notice posted successfully' });
   } catch (err) {
     console.error('Failed to save notice:', err);
-    res.status(500).json({ error: 'Failed to save notice' });
+    res.status(500).json({ success: false, error: 'Failed to save notice' });
   }
 });
 
-// Notice GET API
-app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
+// Notice GET API (Public - No Login Required)
+app.get('/notices', async (req, res) => {
   try {
     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
     res.status(200).json(notices);
@@ -869,6 +908,7 @@ app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
+// Admin: Delete a notice (Requires Admin Login)
 app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) => {
   const { id } = req.params;
   try {
