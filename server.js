@@ -850,7 +850,8 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
   try {
     const newNotice = new Notice({ text });
     await newNotice.save();
-    res.status(201).json({ message: 'Notice posted successfully' });
+    // This line is critical - it must include "success: true"
+    res.status(201).json({ success: true, message: 'Notice posted successfully' });
   } catch (err) {
     console.error('Failed to save notice:', err);
     res.status(500).json({ error: 'Failed to save notice' });
