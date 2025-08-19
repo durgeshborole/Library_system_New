@@ -769,30 +769,79 @@ app.get('/stats', async (req, res) => {
   }
 });
 
+// let AUTO_EXIT_HOUR = 21; // Default: 9 PM
+// let AUTO_EXIT_MINUTE = 0;
+
+// cron.schedule('* * * * *', async () => {
+//   const now = new Date();
+//   const currentHour = now.getHours();
+//   const currentMinute = now.getMinutes();
+
+//   if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
+//     const today = getCurrentDateString();
+//     const autoExitTime = new Date(
+//       now.getFullYear(),
+//       now.getMonth(),
+//       now.getDate(),
+//       AUTO_EXIT_HOUR,
+//       AUTO_EXIT_MINUTE,
+//       0
+//     );
+
+//     try {
+//       const result = await Log.updateMany(
+//         { date: today, exitTime: null },
+//         { $set: { exitTime: autoExitTime } }
+//       );
+
+//       console.log(`🕘 Auto-exit applied: ${result.modifiedCount} entries closed at ${autoExitTime.toLocaleTimeString()}`);
+//     } catch (err) {
+//       console.error("❌ Auto-exit failed:", err);
+//     }
+//   }
+// });
+
+// // Admin: update auto-exit time
+// app.post('/admin/auto-exit', (req, res) => {
+//   const { hour, minute } = req.body;
+//   if (hour === undefined || minute === undefined) {
+//     return res.status(400).json({ error: "Hour and minute are required." });
+//   }
+
+//   AUTO_EXIT_HOUR = parseInt(hour);
+//   AUTO_EXIT_MINUTE = parseInt(minute);
+//   return res.status(200).json({ message: `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}` });
+// });
+
 let AUTO_EXIT_HOUR = 21; // Default: 9 PM
 let AUTO_EXIT_MINUTE = 0;
 
-cron.schedule(`${AUTO_EXIT_MINUTE} ${AUTO_EXIT_HOUR} * * *`, async () => {
-  console.log(`[CRON] 🕘 Running daily auto-exit job for ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}...`);
-  
-  // Set the exit time to now.
-  const autoExitTime = new Date();
+cron.schedule('* * * * *', async () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
 
-  try {
-    // ✅ IMPROVED: This filter finds ALL documents where exitTime is not set,
-    // which is more reliable than filtering by today's date string.
-    const result = await Log.updateMany(
-      { exitTime: null },
-      { $set: { exitTime: autoExitTime } }
+  if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
+    const today = getCurrentDateString();
+    const autoExitTime = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      AUTO_EXIT_HOUR,
+      AUTO_EXIT_MINUTE,
+      0
     );
 
-    if (result.modifiedCount > 0) {
-      console.log(`[CRON] ✅ Success! Auto-exited ${result.modifiedCount} users.`);
-    } else {
-      console.log(`[CRON] ℹ️ No users were inside to auto-exit.`);
+    try {
+      const result = await Log.updateMany(
+        { date: today, exitTime: null },
+        { $set: { exitTime: autoExitTime } }
+      );
+
+      console.log(`🕘 Auto-exit applied: ${result.modifiedCount} entries closed at ${autoExitTime.toLocaleTimeString()}`);
+    } catch (err) {
+      console.error("❌ Auto-exit failed:", err);
     }
-  } catch (err) {
-    console.error("[CRON] ❌ Auto-exit job failed:", err);
   }
 });
 
@@ -805,13 +854,9 @@ app.post('/admin/auto-exit', (req, res) => {
 
   AUTO_EXIT_HOUR = parseInt(hour);
   AUTO_EXIT_MINUTE = parseInt(minute);
-
-  // ✅ ADDED: A clearer message for the admin.
-  const message = `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}. Please restart the server for the new schedule to take effect.`;
-  
-  console.log(`[ADMIN] ${message}`);
-  return res.status(200).json({ message: message });
+  return res.status(200).json({ message: `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}` });
 });
+
 
 // Admin: force exit manually
 app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {
