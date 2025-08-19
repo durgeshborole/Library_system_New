@@ -1322,68 +1322,26 @@ app.get('/admin/monthly-awards', async (req, res) => {
 // app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
 //   const { barcode, name, mobile, email } = req.body;
 //   const file = req.file;
-//   if (!barcode || !name || !file) {
-//     return res.status(400).json({ message: "Barcode, name, and photo are required." });
-//   }
 //   try {
 //     const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 //     const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
 //     await newVisitor.save();
+
+//     // Also create a default academic status record for the new student
+//     const decoded = decodeBarcode(barcode);
+//     const newStatus = new AcademicStatus({ barcode, year: decoded.year });
+//     await newStatus.save();
+
 //     res.status(200).json({ message: "✅ Visitor added successfully!" });
 //   } catch (err) {
-//     console.error("Error saving visitor:", err);
-//     res.status(500).json({ message: "❌ Error saving visitor to database." });
+//     // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
+//     if (err.code === 11000) { // Duplicate key error
+//       console.warn(`Visitor with barcode ${barcode} may already exist.`);
+//       return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
+//     }
+//     res.status(500).json({ message: "❌ Error saving visitor." });
 //   }
 // });
-
-
-// app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
-//     const { barcode, name, mobile, email } = req.body;
-//     const file = req.file;
-//     try {
-//         const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-//         const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
-//         await newVisitor.save();
-
-//         // Also create a default academic status record for the new student
-//         const newStatus = new AcademicStatus({ barcode, isPromoted: true });
-//         await newStatus.save();
-
-//         res.status(200).json({ message: "✅ Visitor added successfully!" });
-//     } catch (err) {
-//         // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
-//         if (err.code === 11000) { // Duplicate key error
-//             console.warn(`Visitor with barcode ${barcode} may already exist.`);
-//             return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
-//         }
-//         res.status(500).json({ message: "❌ Error saving visitor." });
-//     }
-// });
-
-app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
-  const { barcode, name, mobile, email } = req.body;
-  const file = req.file;
-  try {
-    const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-    const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
-    await newVisitor.save();
-
-    // Also create a default academic status record for the new student
-    const decoded = decodeBarcode(barcode);
-    const newStatus = new AcademicStatus({ barcode, year: decoded.year });
-    await newStatus.save();
-
-    res.status(200).json({ message: "✅ Visitor added successfully!" });
-  } catch (err) {
-    // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
-    if (err.code === 11000) { // Duplicate key error
-      console.warn(`Visitor with barcode ${barcode} may already exist.`);
-      return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
-    }
-    res.status(500).json({ message: "❌ Error saving visitor." });
-  }
-});
-
 
 // app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
 //   try {
@@ -1433,19 +1391,22 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
 //           if (recordsToInsert.length > 0) {
 //             // Step 1: Insert all the new visitors
 //             const result = await Visitor.insertMany(recordsToInsert, { ordered: false }).catch(e => {
-//                 if (e.code !== 11000) throw e; // Ignore duplicate visitor errors, but throw others
-//                 console.warn("Some visitors were duplicates and were skipped.");
+//               if (e.code !== 11000) throw e; // Ignore duplicate visitor errors, but throw others
+//               console.warn("Some visitors were duplicates and were skipped.");
 //             });
 //             const insertedCount = result ? result.length : recordsToInsert.length;
 
 //             // ✅ ADDED: Step 2: Create the AcademicStatus record for each new visitor
-//             const statusRecords = recordsToInsert.map(v => ({
+//             const statusRecords = recordsToInsert.map(v => {
+//               const decoded = decodeBarcode(v.barcode);
+//               return {
 //                 barcode: v.barcode,
-//                 isPromoted: true // Default to promoted
-//             }));
+//                 year: decoded.year
+//               };
+//             });
 //             await AcademicStatus.insertMany(statusRecords, { ordered: false }).catch(e => {
-//                 if (e.code !== 11000) throw e; // Ignore duplicate status errors
-//                 console.warn("Some academic status records already existed and were skipped.");
+//               if (e.code !== 11000) throw e; // Ignore duplicate status errors
+//               console.warn("Some academic status records already existed and were skipped.");
 //             });
 
 //             console.log(`[Bulk Upload] ✅ Successfully processed ${insertedCount} new visitors and their academic statuses.`);
@@ -1463,6 +1424,31 @@ app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'
 //     res.status(500).json({ success: false, message: "A server error occurred." });
 //   }
 // });
+
+app.post('/add-visitor', authenticateToken, isAdmin, memoryUpload.single('photo'), async (req, res) => {
+  const { barcode, name, mobile, email } = req.body;
+  const file = req.file;
+  try {
+    const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    const newVisitor = new Visitor({ barcode, name, mobile, email, photoUrl });
+    await newVisitor.save();
+
+    // Also create a default academic status record for the new student
+    const decoded = await decodeBarcode(barcode); //  M: Added await
+    const newStatus = new AcademicStatus({ barcode, year: decoded.year });
+    await newStatus.save();
+
+    res.status(200).json({ message: "✅ Visitor added successfully!" });
+  } catch (err) {
+    // If a visitor with the same barcode exists, the academic status might also exist. Handle this gracefully.
+    if (err.code === 11000) { // Duplicate key error
+      console.warn(`Visitor with barcode ${barcode} may already exist.`);
+      return res.status(409).json({ message: `Visitor with barcode ${barcode} already exists.` });
+    }
+    console.error("Error saving visitor:", err); // M: Added detailed error logging
+    res.status(500).json({ message: "❌ Error saving visitor." });
+  }
+});
 
 app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "photos" }]), async (req, res) => {
   try {
@@ -1510,23 +1496,24 @@ app.post('/bulk-add-visitors', tempUpload.fields([{ name: "csv" }, { name: "phot
       .on("end", async () => {
         try {
           if (recordsToInsert.length > 0) {
-            // Step 1: Insert all the new visitors
             const result = await Visitor.insertMany(recordsToInsert, { ordered: false }).catch(e => {
-              if (e.code !== 11000) throw e; // Ignore duplicate visitor errors, but throw others
+              if (e.code !== 11000) throw e;
               console.warn("Some visitors were duplicates and were skipped.");
             });
             const insertedCount = result ? result.length : recordsToInsert.length;
 
-            // ✅ ADDED: Step 2: Create the AcademicStatus record for each new visitor
-            const statusRecords = recordsToInsert.map(v => {
-              const decoded = decodeBarcode(v.barcode);
+            // M: Asynchronously decode barcodes and create academic status records
+            const statusPromises = recordsToInsert.map(async (v) => {
+              const decoded = await decodeBarcode(v.barcode);
               return {
                 barcode: v.barcode,
                 year: decoded.year
               };
             });
+            const statusRecords = await Promise.all(statusPromises);
+
             await AcademicStatus.insertMany(statusRecords, { ordered: false }).catch(e => {
-              if (e.code !== 11000) throw e; // Ignore duplicate status errors
+              if (e.code !== 11000) throw e;
               console.warn("Some academic status records already existed and were skipped.");
             });
 

@@ -232,7 +232,7 @@
                 bulkSubmitBtn.disabled = true;
                 try {
                     const formData = new FormData(bulkForm);
-                    const res = await fetch(" /api/bulk-add-visitors", {
+                    const res = await fetch(" /bulk-add-visitors", {
                         method: "POST",
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
