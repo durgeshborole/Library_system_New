@@ -56,23 +56,74 @@ async function forceExit() {
 }
 
 
+// async function exportLogs(type) {
+//   const endpoint = type === 'today' ? '/live-log' : '/all-logs';
+//   try {
+//     const res = await fetch(`${endpoint}`);
+//     const logs = await res.json();
+//     let csv = "Name,Department,Designation,Entry Time,Exit Time\n";
+//     logs.forEach(log => {
+//       csv += `${log.name},${log.department},${log.designation},${new Date(log.entryTime).toLocaleString()},${log.exitTime ? new Date(log.exitTime).toLocaleString() : "-"}\n`;
+//     });
+
+//     const blob = new Blob([csv], { type: "text/csv" });
+//     const url = URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.href = url;
+//     a.download = `logs_${type}.csv`;
+//     a.click();
+//     URL.revokeObjectURL(url);
+//   } catch (err) {
+//     console.error("Log export failed:", err);
+//     alert("Failed to export logs.");
+//   }
+// }
+
+// in admin.js
+
 async function exportLogs(type) {
   const endpoint = type === 'today' ? '/live-log' : '/all-logs';
   try {
-    const res = await fetch(`${endpoint}`);
+    const res = await fetch(endpoint);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch logs from ${endpoint}`);
+    }
     const logs = await res.json();
-    let csv = "Name,Department,Designation,Entry Time,Exit Time\n";
-    logs.forEach(log => {
-      csv += `${log.name},${log.department},${log.designation},${new Date(log.entryTime).toLocaleString()},${log.exitTime ? new Date(log.exitTime).toLocaleString() : "-"}\n`;
-    });
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `logs_${type}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (logs.length === 0) {
+      alert("No log data to export.");
+      return;
+    }
+
+    // 1. Format the JSON data for the worksheet.
+    const formattedLogs = logs.map(log => ({
+      "Name": log.name,
+      "Department": log.department,
+      "Designation": log.designation,
+      "Entry Time": new Date(log.entryTime).toLocaleString(),
+      "Exit Time": log.exitTime ? new Date(log.exitTime).toLocaleString() : "Inside"
+    }));
+
+    // 2. Create a new worksheet from the formatted data.
+    const worksheet = XLSX.utils.json_to_sheet(formattedLogs);
+
+    // 3. Create a new workbook and add the worksheet to it.
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Logs");
+
+    // 4. Set column widths to be more readable (optional but recommended).
+    worksheet["!cols"] = [
+        { wch: 25 }, // Name
+        { wch: 25 }, // Department
+        { wch: 15 }, // Designation
+        { wch: 22 }, // Entry Time
+        { wch: 22 }  // Exit Time
+    ];
+
+    // 5. Trigger the download of the .xlsx file.
+    const fileName = `logs_${type}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+
   } catch (err) {
     console.error("Log export failed:", err);
     alert("Failed to export logs.");
