@@ -1054,11 +1054,17 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //   }
 // });
 
+// in server.js
+
 app.get('/students', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
+  
+  // ✅ ADDED: Logic to handle the sorting parameter from the frontend
+  const sortByName = parseInt(req.query.sortByName) || 1; // Default to ascending (A-Z)
+  const sortObject = { name: sortByName };
 
   try {
     const query = search
@@ -1071,8 +1077,14 @@ app.get('/students', async (req, res) => {
       : {};
 
     const total = await Visitor.countDocuments(query);
-    const visitors = await Visitor.find(query).skip(skip).limit(limit);
+    
+    // ✅ MODIFIED: Added the .sort(sortObject) to the database query
+    const visitors = await Visitor.find(query)
+      .sort(sortObject) // This now sorts the results by name
+      .skip(skip)
+      .limit(limit);
 
+    // This part of your logic was already correct, it properly gets the promoted year.
     const students = await Promise.all(visitors.map(async (visitor) => {
       const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
       return {
@@ -1080,7 +1092,7 @@ app.get('/students', async (req, res) => {
         barcode: visitor.barcode || "No Barcode",
         photoBase64: visitor.photoUrl || null,
         department: decoded.department || "Unknown",
-        year: decoded.year || "Unknown",
+        year: decoded.year || "Unknown", // This correctly uses the promoted year
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
