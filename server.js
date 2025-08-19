@@ -843,7 +843,7 @@ app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Admin: Add a new notice
-app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
+app.post('/admin/notices', authenticateToken, async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'Notice text required' });
 
@@ -858,7 +858,7 @@ app.post('/admin/notices', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Notice GET API
-app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
+app.get('/notices', authenticateToken, async (req, res) => {
   try {
     const notices = await Notice.find().sort({ timestamp: -1 }).limit(5);
     res.status(200).json(notices);
@@ -868,7 +868,7 @@ app.get('/notices', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) => {
+app.delete('/admin/notices/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
     await Notice.findByIdAndDelete(id);
