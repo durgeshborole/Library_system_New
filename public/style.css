@@ -473,8 +473,8 @@ th, td {
 }
 
 .visitor-photo {
-  width: 100px;
-  height: 100px;
+  width: 130px;
+  height: 160px;
   object-fit: cover;
   border-radius: 8px; /* Slightly rounded square */
   border: 2px solid #ccc;
