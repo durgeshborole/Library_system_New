@@ -579,18 +579,23 @@ async function decodeBarcode(barcode) {
 
 
 
+// in server.js
+
 async function decodeBarcodeWithPromotion(barcode) {
   // Get the base year from the pure decodeBarcode function
-  const decoded = decodeBarcode(barcode);
+  // ✅ CORRECTED: Added the missing 'await' keyword here.
+  const decoded = await decodeBarcode(barcode);
 
   // Only apply promotion logic to students
-  if (decoded.designation !== "Student") return decoded;
+  if (decoded.designation !== "Student") {
+    return decoded;
+  }
 
   // Find the student's academic status from the database
-  const status = await AcademicStatus.findOne({ barcode });
+  const status = await AcademicStatus.findOne({ barcode: barcode });
 
-  // Use the year from the database if it exists, otherwise fall back to the decoded year
-  if (status?.year) {
+  // Use the year from the database if it exists, otherwise fall back to the calculated year
+  if (status && status.year) {
     decoded.year = status.year;
   }
 
