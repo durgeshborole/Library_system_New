@@ -983,11 +983,16 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
   }
 });
 
+// in server.js
 // app.get('/students', async (req, res) => {
 //   const page = parseInt(req.query.page) || 1;
 //   const limit = parseInt(req.query.limit) || 20;
 //   const skip = (page - 1) * limit;
 //   const search = req.query.search?.toLowerCase() || "";
+  
+//   // ✅ ADDED: Logic to handle the sorting parameter from the frontend
+//   const sortByName = parseInt(req.query.sortByName) || 1; // Default to ascending (A-Z)
+//   const sortObject = { name: sortByName };
 
 //   try {
 //     const query = search
@@ -1000,8 +1005,14 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //       : {};
 
 //     const total = await Visitor.countDocuments(query);
-//     const visitors = await Visitor.find(query).skip(skip).limit(limit);
+    
+//     // ✅ MODIFIED: Added the .sort(sortObject) to the database query
+//     const visitors = await Visitor.find(query)
+//       .sort(sortObject) // This now sorts the results by name
+//       .skip(skip)
+//       .limit(limit);
 
+//     // This part of your logic was already correct, it properly gets the promoted year.
 //     const students = await Promise.all(visitors.map(async (visitor) => {
 //       const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
 //       return {
@@ -1009,85 +1020,11 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 //         barcode: visitor.barcode || "No Barcode",
 //         photoBase64: visitor.photoUrl || null,
 //         department: decoded.department || "Unknown",
-//         year: decoded.year || "Unknown",
+//         year: decoded.year || "Unknown", // This correctly uses the promoted year
 //         email: visitor.email || "N/A",
 //         mobile: visitor.mobile || "N/A"
 //       };
 //     }));
-
-//     res.status(200).json({
-//       students,
-//       totalPages: Math.ceil(total / limit),
-//       currentPage: page
-//     });
-//   } catch (err) {
-//     console.error("❌ Error in /students:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
-
-// app.get('/students', async (req, res) => {
-//   const page = parseInt(req.query.page) || 1;
-//   const limit = parseInt(req.query.limit) || 20;
-//   const skip = (page - 1) * limit;
-//   const search = req.query.search?.toLowerCase() || "";
-//   const sortByName = parseInt(req.query.sortByName);
- 
-
-
-//   try {
-//     const query = {
-//       ...(search
-//         ? {
-//           $or: [
-//             { name: { $regex: search, $options: "i" } },
-//             { barcode: { $regex: search, $options: "i" } }
-//           ]
-//         }
-//         : {}),
-//       };
-
-//     const sortObject = {};
-//     if (sortByName) {
-//       sortObject.name = sortByName;
-//     }
-
-
-
-//     const total = await Visitor.countDocuments(query);
-
-//     // Fetch visitors with sorting applied
-//     const visitors = await Visitor.find(query)
-
-//     // Get all barcodes from the current page of visitors
-//     const visitorBarcodes = visitors.map(v => v.barcode);
-
-//     // Fetch all academic statuses for these visitors in a single query
-//     const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
-//     const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
-
-//     const students = visitors.map(visitor => {
-//       let year;
-//       // Get the year from the fetched academic status or fall back to decoding
-//       if (academicStatusMap.has(visitor.barcode)) {
-//         year = academicStatusMap.get(visitor.barcode);
-//       } else {
-//         const decoded = decodeBarcode(visitor.barcode || "");
-//         year = decoded.year;
-//       }
-
-      
-
-//       return {
-//         name: visitor.name || "No Name",
-//         barcode: visitor.barcode || "No Barcode",
-//         photoBase64: visitor.photoUrl || null,
-//         department: decodedDepartment || "Unknown",
-//         year: year || "Unknown",
-//         email: visitor.email || "N/A",
-//         mobile: visitor.mobile || "N/A"
-//       };
-//     });
 
 //     res.status(200).json({
 //       students,
@@ -1107,38 +1044,41 @@ app.get('/students', async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
   const search = req.query.search?.toLowerCase() || "";
-  
-  // ✅ ADDED: Logic to handle the sorting parameter from the frontend
-  const sortByName = parseInt(req.query.sortByName) || 1; // Default to ascending (A-Z)
+  const sortByName = parseInt(req.query.sortByName) || 1;
   const sortObject = { name: sortByName };
 
   try {
     const query = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: "i" } },
-            { barcode: { $regex: search, $options: "i" } }
-          ]
-        }
+      ? { $or: [{ name: { $regex: search, $options: "i" } }, { barcode: { $regex: search, $options: "i" } }] }
       : {};
 
     const total = await Visitor.countDocuments(query);
-    
-    // ✅ MODIFIED: Added the .sort(sortObject) to the database query
-    const visitors = await Visitor.find(query)
-      .sort(sortObject) // This now sorts the results by name
-      .skip(skip)
-      .limit(limit);
+    const visitors = await Visitor.find(query).sort(sortObject).skip(skip).limit(limit);
 
-    // This part of your logic was already correct, it properly gets the promoted year.
+    // --- OPTIMIZATION START ---
+    // 1. Collect all barcodes from the current page of visitors.
+    const visitorBarcodes = visitors.map(v => v.barcode);
+
+    // 2. Fetch all academic statuses for these visitors in a single query.
+    const academicStatuses = await AcademicStatus.find({ barcode: { $in: visitorBarcodes } });
+    
+    // 3. Create a Map for instant lookups (barcode -> year).
+    const academicStatusMap = new Map(academicStatuses.map(s => [s.barcode, s.year]));
+    // --- OPTIMIZATION END ---
+
+    // Now, map the results without causing more database calls.
     const students = await Promise.all(visitors.map(async (visitor) => {
-      const decoded = await decodeBarcodeWithPromotion(visitor.barcode || "");
+      const decoded = await decodeBarcode(visitor.barcode || "");
+      
+      // Use the year from our Map if it exists, otherwise use the calculated year.
+      const finalYear = academicStatusMap.get(visitor.barcode) || decoded.year;
+
       return {
         name: visitor.name || "No Name",
         barcode: visitor.barcode || "No Barcode",
         photoBase64: visitor.photoUrl || null,
         department: decoded.department || "Unknown",
-        year: decoded.year || "Unknown", // This correctly uses the promoted year
+        year: finalYear || "Unknown",
         email: visitor.email || "N/A",
         mobile: visitor.mobile || "N/A"
       };
@@ -1154,7 +1094,6 @@ app.get('/students', async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 // ===================================================================
 // START: NEW ENDPOINTS FOR UPDATING A VISITOR
 // ===================================================================
