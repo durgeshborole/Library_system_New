@@ -813,6 +813,10 @@ app.get('/stats', async (req, res) => {
 //   return res.status(200).json({ message: `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}` });
 // });
 
+// ===================================================================
+// AUTO-EXIT SCHEDULER
+// ===================================================================
+
 let AUTO_EXIT_HOUR = 21; // Default: 9 PM
 let AUTO_EXIT_MINUTE = 0;
 
@@ -821,26 +825,22 @@ cron.schedule('* * * * *', async () => {
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
+  // This check runs every minute to see if it's time to execute the exit logic.
   if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
-    const today = getCurrentDateString();
-    const autoExitTime = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      AUTO_EXIT_HOUR,
-      AUTO_EXIT_MINUTE,
-      0
-    );
+    
+    console.log(`[AUTO-EXIT] Triggered at ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}. Exiting all users who are currently inside.`);
 
     try {
+      // ✅ CORRECTED: This query now finds ALL log entries where exitTime is not set,
+      // regardless of the entry date. This is more robust.
       const result = await Log.updateMany(
-        { date: today, exitTime: null },
-        { $set: { exitTime: autoExitTime } }
+        { exitTime: null },
+        { $set: { exitTime: now } } // Use the current time for the exit.
       );
 
-      console.log(`🕘 Auto-exit applied: ${result.modifiedCount} entries closed at ${autoExitTime.toLocaleTimeString()}`);
+      console.log(`[AUTO-EXIT] 🕘 Success: ${result.modifiedCount} entries were closed.`);
     } catch (err) {
-      console.error("❌ Auto-exit failed:", err);
+      console.error("[AUTO-EXIT] ❌ Auto-exit task failed:", err);
     }
   }
 });
@@ -854,6 +854,9 @@ app.post('/admin/auto-exit', (req, res) => {
 
   AUTO_EXIT_HOUR = parseInt(hour);
   AUTO_EXIT_MINUTE = parseInt(minute);
+  
+  console.log(`[ADMIN] Auto-exit time has been updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}.`);
+  
   return res.status(200).json({ message: `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}` });
 });
 
