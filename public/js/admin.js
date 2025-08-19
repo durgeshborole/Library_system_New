@@ -82,16 +82,25 @@ async function exportLogs(type) {
 // Submit new library notice
 async function submitNotice() {
   const noticeText = document.getElementById("noticeText").value.trim();
+  const token = localStorage.getItem('authToken'); // Get the token
 
   if (!noticeText) {
     alert("Please enter a notice.");
+    return;
+  }
+  if (!token) {
+    alert("Authentication error. Please log in again.");
     return;
   }
 
   try {
     const res = await fetch("/admin/notices", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // ✅ ADDED: Headers with authentication token
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` 
+      },
       body: JSON.stringify({ text: noticeText })
     });
 
@@ -99,14 +108,16 @@ async function submitNotice() {
     if (data.success) {
       alert("📢 Notice posted successfully.");
       document.getElementById("noticeText").value = "";
+      loadAdminNotices(); // Refresh the list
     } else {
-      alert("Failed to post notice.");
+      alert("Failed to post notice: " + (data.message || 'Unknown error'));
     }
   } catch (err) {
     console.error("Notice post failed:", err);
     alert("Server error while posting notice.");
   }
 }
+
 
 
 async function loadAdminNotices() {
@@ -142,11 +153,21 @@ async function loadAdminNotices() {
 }
 
 async function deleteNotice(id) {
+  const token = localStorage.getItem('authToken'); // Get the token
+
   if (!confirm("Are you sure you want to delete this notice?")) return;
+  if (!token) {
+    alert("Authentication error. Please log in again.");
+    return;
+  }
 
   try {
     const res = await fetch(`/admin/notices/${id}`, {
-      method: "DELETE"
+      method: "DELETE",
+      // ✅ ADDED: Headers with authentication token
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
     });
 
     const data = await res.json();
