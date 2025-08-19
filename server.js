@@ -849,25 +849,23 @@ let AUTO_EXIT_MINUTE = 0;
 
 cron.schedule('* * * * *', async () => {
   const now = new Date();
+
+  console.log("[CRON] Running check at", now.toLocaleTimeString());
+
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
-  // This check runs every minute to see if it's time to execute the exit logic.
   if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
-    
-    console.log(`[AUTO-EXIT] Triggered at ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}. Exiting all users who are currently inside.`);
+    console.log(`[AUTO-EXIT] Triggered at ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}`);
 
     try {
-      // ✅ CORRECTED: This query now finds ALL log entries where exitTime is not set,
-      // regardless of the entry date. This is more robust.
       const result = await Log.updateMany(
         { exitTime: null },
-        { $set: { exitTime: now } } // Use the current time for the exit.
+        { $set: { exitTime: now } }
       );
-
-      console.log(`[AUTO-EXIT] 🕘 Success: ${result.modifiedCount} entries were closed.`);
+      console.log(`[AUTO-EXIT] ✅ Closed ${result.modifiedCount} open logs.`);
     } catch (err) {
-      console.error("[AUTO-EXIT] ❌ Auto-exit task failed:", err);
+      console.error("[AUTO-EXIT] ❌ Failed:", err);
     }
   }
 });
