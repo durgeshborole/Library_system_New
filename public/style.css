@@ -525,7 +525,7 @@ th, td {
 
 .visitor-card-full img.visitor-photo {
   width: 130px;
-  height: 130px;
+  height: 160px;
   object-fit: cover;
   border: none;
   border-radius: 0;
