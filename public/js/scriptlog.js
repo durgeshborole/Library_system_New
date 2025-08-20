@@ -264,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
             logs.forEach((log) => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
-        <td>${entry.barcode}</td>
+                
         <td>${log.name}</td>
         <td>${log.department}</td>
         <td>${log.year}</td>
