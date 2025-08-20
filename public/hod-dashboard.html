@@ -233,10 +233,16 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // --- Get User Details from localStorage ---
-            const authToken = localStorage.getItem('authToken');
-            const hodDepartment = localStorage.getItem('hodDepartment');
-            const hodEmail = localStorage.getItem('hodEmail');
+
+            const authToken = sessionStorage.getItem('authToken');
+        const hodEmail = sessionStorage.getItem('hodEmail');
+        if (!authToken || !hodEmail) {
+            window.location.href = 'index.html';
+            return;
+        }
+            // --- Get User Details from sessionStorage ---
+            const hodDepartment = sessionStorage.getItem('hodDepartment');
+            
 
             // --- DOM Elements ---
             const loginBtn = document.getElementById('loginBtn');
@@ -316,9 +322,9 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('hodEmail');
-                localStorage.removeItem('hodDepartment');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('hodEmail');
+                sessionStorage.removeItem('hodDepartment');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });

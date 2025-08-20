@@ -156,8 +156,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('authToken');
-            const department = localStorage.getItem('hodDepartment');
+            const token = sessionStorage.getItem('authToken');
+            const department = sessionStorage.getItem('hodDepartment');
 
             // --- Authentication and Page Setup ---
             if (!token || !department) {
@@ -256,8 +256,8 @@
 
             // --- Logout Logic ---
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('hodDepartment');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('hodDepartment');
                 window.location.href = 'index.html';
             });
 
@@ -271,16 +271,23 @@
             fetchData();
         });
     </script>
-        <script>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const authToken = sessionStorage.getItem('authToken');
+            const hodEmail = sessionStorage.getItem('hodEmail'); // Use a generic key for email
+            if (!authToken || !hodEmail) {
+                window.location.href = 'index.html';
+                return;
+            }
+
             const loginBtn = document.getElementById('loginBtn');
             const profileMenu = document.getElementById('profileMenu');
             const profileIcon = document.getElementById('profileIcon');
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const hodEmail = localStorage.getItem('hodEmail');
-            const authToken = localStorage.getItem('authToken');
+        
+            
 
             if (authToken && hodEmail) {
                 // User is logged in: hide login button, show profile menu
@@ -306,8 +313,8 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('hodEmail');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('hodEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
