@@ -76,22 +76,25 @@
 </body>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Gatekeeper Script ---
+        const authToken = sessionStorage.getItem('authToken');
+        const userEmail = sessionStorage.getItem('userEmail'); 
+        if (!authToken || !userEmail) {
+            // If token or email is missing, redirect to login
+            window.location.href = 'index.html';
+            return; // Stop further execution
+        }
+
+        // --- Original Page Logic (only runs if logged in) ---
         const loginBtn = document.getElementById('loginBtn');
         const profileMenu = document.getElementById('profileMenu');
         const profileIcon = document.getElementById('profileIcon');
         const profileDropdown = document.getElementById('profileDropdown');
         
-        const userEmail = localStorage.getItem('userEmail'); 
-        const authToken = localStorage.getItem('authToken');
-
-        if (authToken && userEmail) {
-            loginBtn.style.display = 'none';
-            profileMenu.style.display = 'block';
-            document.querySelector('.profile-email').textContent = userEmail;
-        } else {
-            loginBtn.style.display = 'block';
-            profileMenu.style.display = 'none';
-        }
+        // This code now runs only for authenticated users
+        loginBtn.style.display = 'none';
+        profileMenu.style.display = 'block';
+        document.querySelector('.profile-email').textContent = userEmail;
 
         profileIcon.addEventListener('click', (event) => {
             profileDropdown.classList.toggle('show');
@@ -104,7 +107,7 @@
             }
         });
 
-        // Logout logic is handled in assistant.js
+        // Logout logic is handled in assistant.js, which should also use sessionStorage
     });
-  </script>
+</script>
 </html>

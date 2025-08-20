@@ -258,7 +258,7 @@
             fetchData();
         });
     </script>
-    <script>
+    <!-- <script>
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('loginBtn');
             const profileMenu = document.getElementById('profileMenu');
@@ -295,6 +295,131 @@
                 event.preventDefault();
                 sessionStorage.removeItem('authToken');
                 sessionStorage.removeItem('principalEmail');
+                alert('You have been logged out.');
+                window.location.href = 'index.html';
+            });
+        });
+    </script> -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // This gatekeeper was already correct
+            const token = sessionStorage.getItem('authToken');
+            const userRole = sessionStorage.getItem('userRole');
+            if (!token || userRole !== 'principal') {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const headers = { 'Authorization': `Bearer ${token}` };
+            let departmentChart = null;
+
+            async function fetchDashboardData() {
+                try {
+                    const statsRes = await fetch('/api/principal/stats', { headers });
+                    const statsData = await statsRes.json();
+                    if (statsRes.ok) {
+                        document.getElementById('totalVisits').textContent = statsData.totalVisitsToday;
+                        document.getElementById('peakHour').textContent = statsData.peakHour || 'N/A';
+                        updateChart(statsData.departmentCounts);
+                    }
+
+                    const logRes = await fetch('/live-log');
+                    const logData = await logRes.json();
+                    const logTableBody = document.getElementById('liveLogTable');
+                    logTableBody.innerHTML = '';
+                    if (logData.length > 0) {
+                        logData.slice(0, 10).forEach(log => {
+                            const row = `
+                            <tr>
+                                <td>${log.name}</td>
+                                <td>${log.department}</td>
+                                <td>${log.designation}</td>
+                                <td>${new Date(log.entryTime).toLocaleTimeString()}</td>
+                                <td>${log.exitTime ? new Date(log.exitTime).toLocaleTimeString() : 'Inside'}</td>
+                            </tr>`;
+                            logTableBody.innerHTML += row;
+                        });
+                    } else {
+                        logTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No entries yet today.</td></tr>';
+                    }
+                } catch (error) {
+                    console.error('Failed to load dashboard data:', error);
+                }
+            }
+
+            function updateChart(departmentData) {
+                const ctx = document.getElementById('departmentChart').getContext('2d');
+                const labels = departmentData.map(d => d._id);
+                const data = departmentData.map(d => d.count);
+                if (departmentChart) {
+                    departmentChart.destroy();
+                }
+                departmentChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Number of Visits',
+                            data: data,
+                            backgroundColor: 'rgba(229, 9, 20, 0.6)',
+                            borderColor: 'rgba(229, 9, 20, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                        responsive: true,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            fetchDashboardData();
+            const socket = io();
+            socket.on('logUpdate', () => {
+                console.log('🔄 Received log update signal. Refetching dashboard data...');
+                fetchDashboardData();
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Gatekeeper Script ---
+            const authToken = sessionStorage.getItem('authToken');
+            const principalEmail = sessionStorage.getItem('principalEmail');
+            if (!authToken || !principalEmail) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // --- Original Page Logic ---
+            const loginBtn = document.getElementById('loginBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            const profileIcon = document.getElementById('profileIcon');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            loginBtn.style.display = 'none';
+            profileMenu.style.display = 'block';
+            document.querySelector('.profile-email').textContent = principalEmail;
+
+            profileIcon.addEventListener('click', (event) => {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            window.addEventListener('click', () => {
+                if (profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            });
+
+            logoutBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('principalEmail');
+                sessionStorage.removeItem('userRole'); // Also remove role
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });

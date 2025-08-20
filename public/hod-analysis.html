@@ -279,8 +279,8 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const hodEmail = sessionStorage.getItem('hodEmail');
-            const authToken = sessionStorage.getItem('authToken');
+            const hodEmail = localStorage.getItem('hodEmail');
+            const authToken = localStorage.getItem('authToken');
 
             if (authToken && hodEmail) {
                 // User is logged in: hide login button, show profile menu
@@ -306,8 +306,8 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                sessionStorage.removeItem('authToken');
-                sessionStorage.removeItem('hodEmail');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
