@@ -230,28 +230,29 @@ document.addEventListener("DOMContentLoaded", () => {
     // }
 
     function updateLiveLog(log) {
-    logTable.innerHTML = "";
-    if (!log || log.length === 0) {
-        const row = document.createElement("tr");
-        // Update colspan to 8 to account for the new column
-        row.innerHTML = `<td colspan="8" style="text-align: center;">No entries recorded for today.</td>`;
-        logTable.appendChild(row);
-    } else {
-        log.forEach((entry) => {
+        logTable.innerHTML = "";
+        if (!log || log.length === 0) {
             const row = document.createElement("tr");
-            const duration = entry.exitTime ? ((new Date(entry.exitTime) - new Date(entry.entryTime)) / 1000).toFixed(0) : "-";
-            row.innerHTML = `
-      <td>${entry.barcode}</td> <td>${entry.name}</td>
+            // Update colspan to 8 to account for the new column
+            row.innerHTML = `<td colspan="8" style="text-align: center;">No entries recorded for today.</td>`;
+            logTable.appendChild(row);
+        } else {
+            log.forEach((entry) => {
+                const row = document.createElement("tr");
+                const duration = entry.exitTime ? ((new Date(entry.exitTime) - new Date(entry.entryTime)) / 1000).toFixed(0) : "-";
+                row.innerHTML = `
+      <td>${entry.barcode}</td>
+      <td>${entry.name}</td>
       <td>${entry.department}</td>
       <td>${entry.year || "-"}</td>
       <td>${entry.designation}</td>
       <td>${formatDate(entry.entryTime)}</td>
       <td>${entry.exitTime ? formatDate(entry.exitTime) : "-"}</td>
       <td>${duration !== "-" ? duration + " sec" : "-"}</td>`;
-            logTable.appendChild(row);
-        });
+                logTable.appendChild(row);
+            });
+        }
     }
-}
 
     async function loadLiveLog() {
         try {
@@ -263,6 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
             logs.forEach((log) => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
+        <td>${entry.barcode}</td>
         <td>${log.name}</td>
         <td>${log.department}</td>
         <td>${log.year}</td>
