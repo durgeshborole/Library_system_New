@@ -27,7 +27,7 @@ async function updateAutoExit() {
 async function forceExit() {
   if (!confirm("Are you sure you want to force exit all currently present users?")) return;
 
-  const token = localStorage.getItem("authToken"); // Get it fresh
+  const token = sessionStorage.getItem("authToken"); // Get it fresh
   if (!token) {
     alert("You are not logged in.");
     return;
@@ -133,7 +133,7 @@ async function exportLogs(type) {
 // Submit new library notice
 async function submitNotice() {
   const noticeText = document.getElementById("noticeText").value.trim();
-  const token = localStorage.getItem('authToken'); // Get the token
+  const token = sessionStorage.getItem('authToken'); // Get the token
 
   if (!noticeText) {
     alert("Please enter a notice.");
@@ -204,7 +204,7 @@ async function loadAdminNotices() {
 }
 
 async function deleteNotice(id) {
-  const token = localStorage.getItem('authToken'); // Get the token
+  const token = sessionStorage.getItem('authToken'); // Get the token
 
   if (!confirm("Are you sure you want to delete this notice?")) return;
   if (!token) {
@@ -246,7 +246,7 @@ async function uploadPhoto() {
   const barcode = document.getElementById('photoBarcode').value.trim();
   const fileInput = document.getElementById('photoFile');
   const file = fileInput.files[0];
-  const token = localStorage.getItem('authToken'); // ✅ GET THE TOKEN
+  const token = sessionStorage.getItem('authToken'); // ✅ GET THE TOKEN
 
   if (!barcode || !file) {
     alert('Please enter barcode and select a photo.');
@@ -287,7 +287,7 @@ async function uploadPhoto() {
 
 async function bulkUploadPhotos() {
   const files = document.getElementById('bulkPhotoFiles').files;
-  const token = localStorage.getItem('authToken'); // ✅ GET THE TOKEN
+  const token = sessionStorage.getItem('authToken'); // ✅ GET THE TOKEN
 
   if (files.length === 0) {
     alert('Please select at least one file.');

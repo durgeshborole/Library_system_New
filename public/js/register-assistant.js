@@ -3,7 +3,7 @@ document.getElementById('registerAssistantForm').addEventListener('submit', asyn
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    const token = localStorage.getItem('authToken');
+    const token = sessionStorage.getItem('authToken');
 
     try {
         const response = await fetch('/api/register-assistant', {

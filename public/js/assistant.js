@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(logoutBtn) {
         logoutBtn.addEventListener('click', (event) => {
             event.preventDefault();
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userEmail'); // Use a generic key for email
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('userEmail'); // Use a generic key for email
             alert('You have been logged out.');
             window.location.href = 'index.html';
         });

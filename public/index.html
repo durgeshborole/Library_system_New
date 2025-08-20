@@ -100,23 +100,23 @@
                         }
 
                         // --- Handle Successful Login ---
-                        localStorage.setItem('authToken', result.token);
+                        sessionStorage.setItem('authToken', result.token);
 
                         // Note: 'userRole' is not strictly required by the dashboards, 
                         // but can be useful for debugging.
-                        localStorage.setItem('userRole', result.role);
+                        sessionStorage.setItem('userRole', result.role);
 
                         if (result.role === 'admin') {
-                            localStorage.setItem('adminEmail', result.email);
+                            sessionStorage.setItem('adminEmail', result.email);
                             window.location.href = 'dashboard.html';
                         } else if (result.role === 'principal') {
-                            localStorage.setItem('principalEmail', result.email);
+                            sessionStorage.setItem('principalEmail', result.email);
                             window.location.href = 'principal-dashboard.html';
                         } else if (result.role === 'hod') {
                             // ✅ **THIS IS THE FIX**
                             // You were missing the line to save the HOD's email.
-                            localStorage.setItem('hodDepartment', result.department);
-                            localStorage.setItem('hodEmail', result.email); // Add this line
+                            sessionStorage.setItem('hodDepartment', result.department);
+                            sessionStorage.setItem('hodEmail', result.email); // Add this line
                             window.location.href = 'hod-dashboard.html';
                         } else {
                             throw new Error("Unknown user role received from server.");
@@ -139,10 +139,10 @@
                         const result = await res.json();
                         if (!res.ok) throw new Error(result.message || "Verification failed.");
 
-                        localStorage.setItem('authToken', result.token);
-                        localStorage.setItem('userRole', 'hod');
-                        localStorage.setItem('hodDepartment', result.department);
-                        localStorage.setItem('hodEmail', email); // Also save email on OTP verification
+                        sessionStorage.setItem('authToken', result.token);
+                        sessionStorage.setItem('userRole', 'hod');
+                        sessionStorage.setItem('hodDepartment', result.department);
+                        sessionStorage.setItem('hodEmail', email); // Also save email on OTP verification
                         window.location.href = "hod-dashboard.html";
 
                     } catch (error) {
@@ -204,21 +204,21 @@
                         }
 
                         // --- Handle Successful Login ---
-                        localStorage.setItem('authToken', result.token);
-                        localStorage.setItem('userRole', result.role); // Optional, for debugging
+                        sessionStorage.setItem('authToken', result.token);
+                        sessionStorage.setItem('userRole', result.role); // Optional, for debugging
 
                         if (result.role === 'admin') {
-                            localStorage.setItem('adminEmail', result.email);
+                            sessionStorage.setItem('adminEmail', result.email);
                             window.location.href = 'dashboard.html';
                         } else if (result.role === 'principal') {
-                            localStorage.setItem('principalEmail', result.email);
+                            sessionStorage.setItem('principalEmail', result.email);
                             window.location.href = 'principal-dashboard.html';
                         } else if (result.role === 'hod') {
-                            localStorage.setItem('hodDepartment', result.department);
-                            localStorage.setItem('hodEmail', result.email);
+                            sessionStorage.setItem('hodDepartment', result.department);
+                            sessionStorage.setItem('hodEmail', result.email);
                             window.location.href = 'hod-dashboard.html';
                         } else if (result.role === 'assistant') { // ✅ **THIS IS THE FIX**
-                            localStorage.setItem('userEmail', result.email); // Use a generic key
+                            sessionStorage.setItem('userEmail', result.email); // Use a generic key
                             window.location.href = 'assistant.html';
                         } else {
                             // This is where your original error came from
@@ -242,10 +242,10 @@
                         const result = await res.json();
                         if (!res.ok) throw new Error(result.message || "Verification failed.");
 
-                        localStorage.setItem('authToken', result.token);
-                        localStorage.setItem('userRole', 'hod');
-                        localStorage.setItem('hodDepartment', result.department);
-                        localStorage.setItem('hodEmail', email);
+                        sessionStorage.setItem('authToken', result.token);
+                        sessionStorage.setItem('userRole', 'hod');
+                        sessionStorage.setItem('hodDepartment', result.department);
+                        sessionStorage.setItem('hodEmail', email);
                         window.location.href = "hod-dashboard.html";
 
                     } catch (error) {

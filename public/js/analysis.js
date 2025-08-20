@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ✅ MODIFIED: Updated the confirmation message to be more accurate.
   async function clearDatabase() {
-    const token = localStorage.getItem('authToken');
+    const token = sessionStorage.getItem('authToken');
     if (!token) {
         alert('Authentication error. Please log in as an administrator.');
         return;

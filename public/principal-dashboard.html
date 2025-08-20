@@ -85,8 +85,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('authToken');
-            const userRole = localStorage.getItem('userRole');
+            const token = sessionStorage.getItem('authToken');
+            const userRole = sessionStorage.getItem('userRole');
 
             if (!token || userRole !== 'principal') {
                 // You will create principal-login.html later
@@ -174,8 +174,8 @@
             });
 
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userRole');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('userRole');
                 window.location.href = 'index.html';
             });
 
@@ -302,8 +302,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('authToken');
-            const userRole = localStorage.getItem('userRole');
+            const token = sessionStorage.getItem('authToken');
+            const userRole = sessionStorage.getItem('userRole');
 
             if (!token || userRole !== 'principal') {
                 window.location.href = 'index.html';
@@ -388,8 +388,8 @@
 
             // Logout button
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userRole');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('userRole');
                 window.location.href = 'index.html';
             });
 
@@ -404,8 +404,8 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const principalEmail = localStorage.getItem('principalEmail');
-            const authToken = localStorage.getItem('authToken');
+            const principalEmail = sessionStorage.getItem('principalEmail');
+            const authToken = sessionStorage.getItem('authToken');
 
             if (authToken && principalEmail) {
                 // User is logged in: hide login button, show profile menu
@@ -431,8 +431,8 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('principalEmail');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('principalEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
@@ -446,8 +446,8 @@
             const profileDropdown = document.getElementById('profileDropdown');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            const adminEmail = localStorage.getItem('principalEmail');
-            const authToken = localStorage.getItem('authToken');
+            const adminEmail = sessionStorage.getItem('principalEmail');
+            const authToken = sessionStorage.getItem('authToken');
 
             if (authToken && adminEmail) {
                 // User is logged in: hide login button, show profile menu
@@ -473,8 +473,8 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('principalEmail');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('principalEmail');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });

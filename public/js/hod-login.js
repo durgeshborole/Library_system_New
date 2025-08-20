@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } else {
                     // Login successful, token received
-                    localStorage.setItem('authToken', data.token);
+                    sessionStorage.setItem('authToken', data.token);
                     window.location.href = '/hod-dashboard.html'; // Redirect to dashboard
                 }
 
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // OTP verification successful, token received
-                localStorage.setItem('authToken', data.token);
+                sessionStorage.setItem('authToken', data.token);
                 window.location.href = '/hod-dashboard.html'; // Redirect to dashboard
 
             } catch (err) {

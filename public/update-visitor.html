@@ -71,7 +71,7 @@
             const form = document.getElementById("updateForm");
 
             // ✅ Get the admin authentication token
-            const token = localStorage.getItem('authToken');
+            const token = sessionStorage.getItem('authToken');
 
             // Redirect if barcode is missing or user is not logged in
             if (!barcode || !token) {
