@@ -117,23 +117,31 @@
 </body>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+   document.addEventListener('DOMContentLoaded', () => {
+        // --- Gatekeeper Script ---
+        const authToken = sessionStorage.getItem('authToken');
+        if (!authToken) {
+            // If no token is found, immediately redirect to the login page
+            window.location.href = 'index.html';
+            return; // Stop the rest of the script from running
+        }
+
+        // --- Original Page Logic (only runs if the user is logged in) ---
         const loginBtn = document.getElementById('loginBtn');
         const profileMenu = document.getElementById('profileMenu');
         const profileIcon = document.getElementById('profileIcon');
         const profileDropdown = document.getElementById('profileDropdown');
         const logoutBtn = document.getElementById('logoutBtn');
+        
+        // This logic now only runs for authenticated users
+        const adminEmail = sessionStorage.getItem('adminEmail'); // Or userEmail, etc.
 
-        const adminEmail = sessionStorage.getItem('adminEmail');
-        const authToken = sessionStorage.getItem('authToken');
-
-        if (authToken && adminEmail) {
-            // User is logged in: hide login button, show profile menu
+        if (adminEmail) {
             loginBtn.style.display = 'none';
-            profileMenu.style.display = 'block'; // Use 'block' to show the div
+            profileMenu.style.display = 'block';
             document.querySelector('.profile-email').textContent = adminEmail;
         } else {
-            // User is not logged in: show login button, hide profile menu
+            // This case should ideally not be reached because of the gatekeeper
             loginBtn.style.display = 'block';
             profileMenu.style.display = 'none';
         }
