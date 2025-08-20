@@ -234,9 +234,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             // --- Get User Details from localStorage ---
-            const authToken = sessionStorage.getItem('authToken');
-            const hodDepartment = sessionStorage.getItem('hodDepartment');
-            const hodEmail = sessionStorage.getItem('hodEmail');
+            const authToken = localStorage.getItem('authToken');
+            const hodDepartment = localStorage.getItem('hodDepartment');
+            const hodEmail = localStorage.getItem('hodEmail');
 
             // --- DOM Elements ---
             const loginBtn = document.getElementById('loginBtn');
@@ -316,9 +316,9 @@
 
             logoutBtn.addEventListener('click', (event) => {
                 event.preventDefault();
-                sessionStorage.removeItem('authToken');
-                sessionStorage.removeItem('hodEmail');
-                sessionStorage.removeItem('hodDepartment');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('hodEmail');
+                localStorage.removeItem('hodDepartment');
                 alert('You have been logged out.');
                 window.location.href = 'index.html';
             });
