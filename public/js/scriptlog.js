@@ -206,28 +206,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Updates the log table, handling empty logs
+    // function updateLiveLog(log) {
+    //     logTable.innerHTML = "";
+    //     if (!log || log.length === 0) {
+    //         const row = document.createElement("tr");
+    //         row.innerHTML = `<td colspan="7" style="text-align: center;">No entries recorded for today.</td>`;
+    //         logTable.appendChild(row);
+    //     } else {
+    //         log.forEach((entry) => {
+    //             const row = document.createElement("tr");
+    //             const duration = entry.exitTime ? ((new Date(entry.exitTime) - new Date(entry.entryTime)) / 1000).toFixed(0) : "-";
+    //             row.innerHTML = `
+    //       <td>${entry.name}</td>
+    //       <td>${entry.department}</td>
+    //       <td>${entry.year || "-"}</td>
+    //       <td>${entry.designation}</td>
+    //       <td>${formatDate(entry.entryTime)}</td>
+    //       <td>${entry.exitTime ? formatDate(entry.exitTime) : "-"}</td>
+    //       <td>${duration !== "-" ? duration + " sec" : "-"}</td>`;
+    //             logTable.appendChild(row);
+    //         });
+    //     }
+    // }
+
     function updateLiveLog(log) {
-        logTable.innerHTML = "";
-        if (!log || log.length === 0) {
+    logTable.innerHTML = "";
+    if (!log || log.length === 0) {
+        const row = document.createElement("tr");
+        // Update colspan to 8 to account for the new column
+        row.innerHTML = `<td colspan="8" style="text-align: center;">No entries recorded for today.</td>`;
+        logTable.appendChild(row);
+    } else {
+        log.forEach((entry) => {
             const row = document.createElement("tr");
-            row.innerHTML = `<td colspan="7" style="text-align: center;">No entries recorded for today.</td>`;
+            const duration = entry.exitTime ? ((new Date(entry.exitTime) - new Date(entry.entryTime)) / 1000).toFixed(0) : "-";
+            row.innerHTML = `
+      <td>${entry.barcode}</td> <td>${entry.name}</td>
+      <td>${entry.department}</td>
+      <td>${entry.year || "-"}</td>
+      <td>${entry.designation}</td>
+      <td>${formatDate(entry.entryTime)}</td>
+      <td>${entry.exitTime ? formatDate(entry.exitTime) : "-"}</td>
+      <td>${duration !== "-" ? duration + " sec" : "-"}</td>`;
             logTable.appendChild(row);
-        } else {
-            log.forEach((entry) => {
-                const row = document.createElement("tr");
-                const duration = entry.exitTime ? ((new Date(entry.exitTime) - new Date(entry.entryTime)) / 1000).toFixed(0) : "-";
-                row.innerHTML = `
-          <td>${entry.name}</td>
-          <td>${entry.department}</td>
-          <td>${entry.year || "-"}</td>
-          <td>${entry.designation}</td>
-          <td>${formatDate(entry.entryTime)}</td>
-          <td>${entry.exitTime ? formatDate(entry.exitTime) : "-"}</td>
-          <td>${duration !== "-" ? duration + " sec" : "-"}</td>`;
-                logTable.appendChild(row);
-            });
-        }
+        });
     }
+}
 
     async function loadLiveLog() {
         try {

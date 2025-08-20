@@ -240,13 +240,20 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+// in admin.js
+
 async function uploadPhoto() {
   const barcode = document.getElementById('photoBarcode').value.trim();
   const fileInput = document.getElementById('photoFile');
   const file = fileInput.files[0];
+  const token = localStorage.getItem('authToken'); // ✅ GET THE TOKEN
 
   if (!barcode || !file) {
     alert('Please enter barcode and select a photo.');
+    return;
+  }
+  if (!token) { // ✅ VALIDATE TOKEN
+    alert('Authentication error. Please log in again.');
     return;
   }
 
@@ -257,6 +264,9 @@ async function uploadPhoto() {
   try {
     const res = await fetch('/upload-photo', {
       method: 'POST',
+      headers: { // ✅ ADD AUTHORIZATION HEADER
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
 
@@ -266,7 +276,7 @@ async function uploadPhoto() {
       document.getElementById('photoBarcode').value = '';
       fileInput.value = '';
     } else {
-      alert('❌ Upload failed.');
+      alert('❌ Upload failed: ' + (data.message || 'Unknown error'));
     }
   } catch (err) {
     console.error('Upload photo failed:', err);
@@ -275,40 +285,45 @@ async function uploadPhoto() {
 }
 
 
-
-
 async function bulkUploadPhotos() {
   const files = document.getElementById('bulkPhotoFiles').files;
+  const token = localStorage.getItem('authToken'); // ✅ GET THE TOKEN
 
   if (files.length === 0) {
     alert('Please select at least one file.');
     return;
   }
+  if (!token) { // ✅ VALIDATE TOKEN
+    alert('Authentication error. Please log in again.');
+    return;
+  }
 
   const formData = new FormData();
   for (const file of files) {
-    formData.append('photos', file); // "photos" must match server field
+    formData.append('photos', file);
   }
 
   try {
     const res = await fetch('/bulk-upload-photos', {
       method: 'POST',
+      headers: { // ✅ ADD AUTHORIZATION HEADER
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
 
     const data = await res.json();
     if (data.success) {
       alert(`✅ Successfully uploaded ${data.uploadedCount} photos.`);
-      document.getElementById('bulkPhotoFiles').value = ''; // Clear input
+      document.getElementById('bulkPhotoFiles').value = '';
     } else {
-      alert('❌ Bulk upload failed.');
+      alert('❌ Bulk upload failed: ' + (data.message || 'Unknown error'));
     }
   } catch (err) {
     console.error('Bulk upload failed:', err);
     alert('❌ Server error.');
   }
 }
-
 async function loadMonthlyAwards() {
   const resultBox = document.getElementById("awardResults");
   resultBox.innerHTML = "⏳ Loading...";

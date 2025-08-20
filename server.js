@@ -180,6 +180,13 @@ const PrincipalSchema = new mongoose.Schema({
 // Add this with your other Mongoose Models
 const Principal = mongoose.model("Principal", PrincipalSchema);
 
+
+const AssistantSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true },
+});
+const Assistant = mongoose.model("Assistant", AssistantSchema);
+
 // Add this with your other security middleware (like isAdmin)
 const isPrincipal = (req, res, next) => {
   if (req.user.role !== 'principal') {
@@ -993,7 +1000,10 @@ app.delete('/admin/notices/:id', authenticateToken, isAdmin, async (req, res) =>
   }
 });
 
-app.post('/upload-photo', upload.single('photo'), authenticateToken, isAdmin, async (req, res) => {
+// in server.js
+
+// Change this line from 'upload.single' to 'memoryUpload.single'
+app.post('/upload-photo', memoryUpload.single('photo'), authenticateToken, isAdmin, async (req, res) => {
   const barcode = req.body.barcode;
   if (!barcode || !req.file) {
     return res.status(400).json({ success: false, message: 'Barcode and photo required.' });
@@ -1019,7 +1029,8 @@ app.post('/upload-photo', upload.single('photo'), authenticateToken, isAdmin, as
   }
 });
 
-app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, isAdmin, async (req, res) => {
+// And change this line from 'upload.array' to 'memoryUpload.array'
+app.post('/bulk-upload-photos', memoryUpload.array('photos', 500), authenticateToken, isAdmin, async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'No photos uploaded.' });
@@ -1030,16 +1041,20 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
     let uploadedCount = 0;
 
     for (const file of req.files) {
+      // The filename (without extension) is treated as the barcode
       const filenameWithoutExtension = file.originalname.split('.').slice(0, -1).join('.');
       const barcode = filenameWithoutExtension.trim();
 
-      if (!barcode) continue;
+      if (!barcode) continue; // Skip if barcode is empty
 
+      // Convert the file buffer to a base64 string
       const photoUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
+      // Find an existing visitor or create a new one
       let visitor = await Visitor.findOne({ barcode });
 
       if (!visitor) {
+        // If visitor doesn't exist, you might want to create a placeholder
         visitor = new Visitor({ barcode, name: "Unknown", photoUrl });
       } else {
         visitor.photoUrl = photoUrl;
@@ -1051,11 +1066,10 @@ app.post('/bulk-upload-photos', upload.array('photos', 500), authenticateToken, 
 
     return res.status(200).json({ success: true, uploadedCount });
   } catch (err) {
-    console.error('❌ Server crashed during upload:', err);
-    return res.status(500).json({ success: false, message: 'Server crashed' });
+    console.error('❌ Server error during bulk upload:', err);
+    return res.status(500).json({ success: false, message: 'Server error during upload.' });
   }
 });
-
 // in server.js
 // app.get('/students', async (req, res) => {
 //   const page = parseInt(req.query.page) || 1;
@@ -1897,25 +1911,6 @@ app.delete("/api/hods/:id", authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ MODIFIED: This endpoint now ONLY deletes logs.
-app.delete("/api/clear-database", authenticateToken, isAdmin, async (req, res) => {
-  try {
-    // This line deletes all documents from the 'logs' collection.
-    const logResult = await Log.deleteMany({});
-
-    // The line that deleted visitors has been removed.
-
-    const message = `All ${logResult.deletedCount} log entries have been cleared successfully.`;
-
-    console.log(`✅ ${message}`);
-    res.status(200).json({ success: true, message });
-
-  } catch (error) {
-    console.error("❌ Error clearing logs:", error);
-    res.status(500).json({ success: false, message: "Server error while clearing logs." });
-  }
-});
-
 
 app.get('/api/monthly-awards', async (req, res) => {
   try {
@@ -2100,16 +2095,77 @@ app.get("/api/principal/stats", authenticateToken, isPrincipal, async (req, res)
   }
 });
 
+// app.post("/api/login/unified", async (req, res) => {
+
+
+//   const { email, password } = req.body;
+//   if (!email || !password) {
+//     return res.status(400).json({ message: "Email and password are required." });
+//   }
+
+//   try {
+//     // Step 1: Check if the user is an Admin
+//     const admin = await Admin.findOne({ email });
+//     if (admin) {
+//       const match = await bcrypt.compare(password, admin.password);
+//       if (match) {
+//         const token = jwt.sign({ id: admin._id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+//         return res.json({ success: true, token, role: 'admin', email: admin.email });
+//       }
+//     }
+
+//     // Step 2: If not an Admin, check if the user is a Principal
+//     const principal = await Principal.findOne({ email });
+//     if (principal) {
+//       const match = await bcrypt.compare(password, principal.password);
+//       if (match) {
+//         const token = jwt.sign({ id: principal._id, role: 'principal' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+//         return res.json({ success: true, token, role: 'principal', email: principal.email });
+//       }
+//     }
+
+//     // Step 3: If not an Admin or Principal, check if the user is an HOD
+//     const hod = await Hod.findOne({ email });
+//     if (hod) {
+//       const match = await bcrypt.compare(password, hod.password);
+//       if (match) {
+//         // HODs have a special one-time verification flow
+//         // if (!hod.isVerified) {
+//         //   const otp = crypto.randomInt(100000, 999999).toString();
+//         //   hod.otp = otp;
+//         //   hod.otpExpires = Date.now() + 10 * 60 * 1000;
+//         //   await hod.save();
+//         //   // You would typically send an email with the OTP here
+//         //   console.log(`HOD Login OTP for ${hod.email}: ${otp}`);
+//         //   return res.json({ success: true, verificationRequired: true, role: 'hod', message: "HOD verification required. An OTP has been sent." });
+//         // } else {
+//         //   const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
+//         //   return res.json({ success: true, token, role: 'hod', department: hod.department });
+//         // }
+
+//         const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
+//         return res.json({ success: true, token, role: 'hod', department: hod.department, email: hod.email });
+//       }
+//     }
+
+//     // Step 4: If user is not found in any collection, send an error
+//     return res.status(401).json({ message: "Invalid credentials." });
+
+//   } catch (error) {
+//     console.error("Unified login error:", error);
+//     res.status(500).json({ message: "Server error during login." });
+//   }
+// });
+
+
 app.post("/api/login/unified", async (req, res) => {
-
-
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
-    // Step 1: Check if the user is an Admin
+    // Step 1: Check for Admin
     const admin = await Admin.findOne({ email });
     if (admin) {
       const match = await bcrypt.compare(password, admin.password);
@@ -2119,7 +2175,7 @@ app.post("/api/login/unified", async (req, res) => {
       }
     }
 
-    // Step 2: If not an Admin, check if the user is a Principal
+    // Step 2: Check for Principal
     const principal = await Principal.findOne({ email });
     if (principal) {
       const match = await bcrypt.compare(password, principal.password);
@@ -2129,31 +2185,27 @@ app.post("/api/login/unified", async (req, res) => {
       }
     }
 
-    // Step 3: If not an Admin or Principal, check if the user is an HOD
+    // Step 3: Check for HOD
     const hod = await Hod.findOne({ email });
     if (hod) {
       const match = await bcrypt.compare(password, hod.password);
       if (match) {
-        // HODs have a special one-time verification flow
-        // if (!hod.isVerified) {
-        //   const otp = crypto.randomInt(100000, 999999).toString();
-        //   hod.otp = otp;
-        //   hod.otpExpires = Date.now() + 10 * 60 * 1000;
-        //   await hod.save();
-        //   // You would typically send an email with the OTP here
-        //   console.log(`HOD Login OTP for ${hod.email}: ${otp}`);
-        //   return res.json({ success: true, verificationRequired: true, role: 'hod', message: "HOD verification required. An OTP has been sent." });
-        // } else {
-        //   const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
-        //   return res.json({ success: true, token, role: 'hod', department: hod.department });
-        // }
-
         const token = jwt.sign({ id: hod._id, role: 'hod', department: hod.department }, process.env.JWT_SECRET, { expiresIn: '8h' });
         return res.json({ success: true, token, role: 'hod', department: hod.department, email: hod.email });
       }
     }
 
-    // Step 4: If user is not found in any collection, send an error
+    // Step 4: Check for Assistant
+    const assistant = await Assistant.findOne({ email });
+    if (assistant) {
+      const match = await bcrypt.compare(password, assistant.password);
+      if (match) {
+        const token = jwt.sign({ id: assistant._id, role: 'assistant' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+        return res.json({ success: true, token, role: 'assistant', email: assistant.email });
+      }
+    }
+
+    // Step 5: If no user is found
     return res.status(401).json({ message: "Invalid credentials." });
 
   } catch (error) {
@@ -2161,7 +2213,6 @@ app.post("/api/login/unified", async (req, res) => {
     res.status(500).json({ message: "Server error during login." });
   }
 });
-
 
 // ✅ ADDED: New endpoint for generating custom reports
 app.get('/api/reports', authenticateToken, isAdminOrPrincipal, async (req, res) => {
@@ -2238,6 +2289,32 @@ app.get("/api/designations", async (req, res) => {
   const desgs = await Designation.find();
   res.json(desgs);
 });
+
+app.post("/api/register-assistant", authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required." });
+    }
+
+    const existing = await Assistant.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newAssistant = new Assistant({ email, password: hashedPassword });
+    await newAssistant.save();
+
+    res.status(201).json({ success: true, message: "Assistant registered successfully" });
+
+  } catch (err) {
+    console.error("❌ Assistant Registration error:", err);
+    res.status(500).json({ success: false, message: "Server error during registration" });
+  }
+});
+
+
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running at port ${PORT}`);
