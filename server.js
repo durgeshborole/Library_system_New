@@ -823,75 +823,62 @@ app.get('/stats', async (req, res) => {
 // ===================================================================
 // AUTO-EXIT SCHEDULER
 // ===================================================================
-
+let autoExitTask = null;
 let AUTO_EXIT_HOUR = 21; // Default: 9 PM
 let AUTO_EXIT_MINUTE = 0;
+function scheduleAutoExit() {
+  // If an old task exists, stop it before creating a new one
+  if (autoExitTask) {
+    autoExitTask.stop();
+    console.log('[CRON SCHEDULER] Stopped previous auto-exit task.');
+  }
 
-// cron.schedule('* * * * *', async () => {
-//   const now = new Date();
-//   const currentHour = now.getHours();
-//   const currentMinute = now.getMinutes();
+  // This format means the job will run at the specific minute and hour, every day.
+  const cronSchedule = `${AUTO_EXIT_MINUTE} ${AUTO_EXIT_HOUR} * * *`;
 
-//   // This check runs every minute to see if it's time to execute the exit logic.
-//   if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
-    
-//     console.log(`[AUTO-EXIT] Triggered at ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}. Exiting all users who are currently inside.`);
-
-//     try {
-//       // ✅ CORRECTED: This query now finds ALL log entries where exitTime is not set,
-//       // regardless of the entry date. This is more robust.
-//       const result = await Log.updateMany(
-//         { exitTime: null },
-//         { $set: { exitTime: now } } // Use the current time for the exit.
-//       );
-
-//       console.log(`[AUTO-EXIT] 🕘 Success: ${result.modifiedCount} entries were closed.`);
-//     } catch (err) {
-//       console.error("[AUTO-EXIT] ❌ Auto-exit task failed:", err);
-//     }
-//   }
-// });
-
-// in server.js
-
-cron.schedule('* * * * *', async () => {
-  const now = new Date();
-
-  console.log("[CRON] Running check at", now.toLocaleTimeString());
-
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-
-  if (currentHour === AUTO_EXIT_HOUR && currentMinute === AUTO_EXIT_MINUTE) {
-    console.log(`[AUTO-EXIT] Triggered at ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}`);
+  // Create the new scheduled task with the India time zone
+  autoExitTask = cron.schedule(cronSchedule, async () => {
+    const now = new Date();
+    console.log(`[CRON SCHEDULER] ✅ Auto-exit triggered at ${now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`);
 
     try {
+      // This query finds all log entries where exitTime is not set and closes them.
       const result = await Log.updateMany(
         { exitTime: null },
-        { $set: { exitTime: now } }
+        { $set: { exitTime: now } } // Use the current time for the exit.
       );
-      console.log(`[AUTO-EXIT] ✅ Closed ${result.modifiedCount} open logs.`);
-    } catch (err) {
-      console.error("[AUTO-EXIT] ❌ Failed:", err);
-    }
-  }
-});
 
+      console.log(`[CRON SCHEDULER] 🕘 Success: ${result.modifiedCount} open entries were closed.`);
+    } catch (err) {
+      console.error("[CRON SCHEDULER] ❌ Auto-exit task failed:", err);
+    }
+  }, {
+    scheduled: true,
+    timezone: "Asia/Kolkata" // This is the crucial fix!
+  });
+
+  console.log(`[CRON SCHEDULER] 🚀 Auto-exit job scheduled to run daily at ${AUTO_EXIT_HOUR}:${String(AUTO_EXIT_MINUTE).padStart(2, '0')} IST.`);
+}
 // Admin: update auto-exit time
-app.post('/admin/auto-exit', (req, res) => {
+app.post('/admin/auto-exit', authenticateToken, isAdmin, (req, res) => {
   const { hour, minute } = req.body;
-  if (hour === undefined || minute === undefined) {
-    return res.status(400).json({ error: "Hour and minute are required." });
+  
+  if (hour === undefined || minute === undefined || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    return res.status(400).json({ success: false, message: "A valid hour (0-23) and minute (0-59) are required." });
   }
 
   AUTO_EXIT_HOUR = parseInt(hour);
   AUTO_EXIT_MINUTE = parseInt(minute);
   
-  console.log(`[ADMIN] Auto-exit time has been updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}.`);
+  // Reschedule the job with the new time
+  scheduleAutoExit();
   
-  return res.status(200).json({ message: `Auto-exit time updated to ${AUTO_EXIT_HOUR}:${AUTO_EXIT_MINUTE}` });
+  return res.status(200).json({ success: true, message: `Auto-exit time successfully updated to ${AUTO_EXIT_HOUR}:${String(AUTO_EXIT_MINUTE).padStart(2, '0')} IST.` });
 });
 
+
+// Call the function once on server startup to schedule the initial default job
+scheduleAutoExit();
 
 // Admin: force exit manually
 app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {

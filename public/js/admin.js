@@ -1,29 +1,43 @@
 // admin.js
 
+// in admin.js
+
 async function updateAutoExit() {
   const hour = document.getElementById("autoExitHour").value;
   const minute = document.getElementById("autoExitMinute").value;
+  const token = sessionStorage.getItem('authToken'); // Get the token for authentication
 
   if (hour === "" || minute === "") {
     alert("Please fill both hour and minute.");
+    return;
+  }
+  
+  if (!token) {
+    alert("Authentication error. Please log in again.");
     return;
   }
 
   try {
     const res = await fetch("/admin/auto-exit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // Include the auth token
+      },
       body: JSON.stringify({ hour: parseInt(hour), minute: parseInt(minute) })
     });
 
     const result = await res.json();
-    alert(result.message);
+    if (result.success) {
+        alert("✅ " + result.message);
+    } else {
+        alert("❌ Error: " + result.message);
+    }
   } catch (err) {
     console.error("Auto-exit update failed:", err);
-    alert("Failed to update auto-exit time.");
+    alert("Failed to update auto-exit time due to a server error.");
   }
 }
-
 async function forceExit() {
   if (!confirm("Are you sure you want to force exit all currently present users?")) return;
 
