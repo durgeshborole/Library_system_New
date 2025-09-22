@@ -839,6 +839,7 @@ function scheduleAutoExit() {
   // Create the new scheduled task with the India time zone
   autoExitTask = cron.schedule(cronSchedule, async () => {
     const now = new Date();
+    // This log will only appear when the job runs at the correct time
     console.log(`[CRON SCHEDULER] ✅ Auto-exit triggered at ${now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`);
 
     try {
@@ -857,9 +858,12 @@ function scheduleAutoExit() {
     timezone: "Asia/Kolkata" // This is the crucial fix!
   });
 
+  // This log confirms the job has been set for the correct IST time
   console.log(`[CRON SCHEDULER] 🚀 Auto-exit job scheduled to run daily at ${AUTO_EXIT_HOUR}:${String(AUTO_EXIT_MINUTE).padStart(2, '0')} IST.`);
 }
+
 // Admin: update auto-exit time
+// This endpoint now requires authentication and restarts the cron job with the new time.
 app.post('/admin/auto-exit', authenticateToken, isAdmin, (req, res) => {
   const { hour, minute } = req.body;
   
@@ -879,7 +883,6 @@ app.post('/admin/auto-exit', authenticateToken, isAdmin, (req, res) => {
 
 // Call the function once on server startup to schedule the initial default job
 scheduleAutoExit();
-
 // Admin: force exit manually
 app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {
   try {
