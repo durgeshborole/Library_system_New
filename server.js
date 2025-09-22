@@ -821,11 +821,14 @@ app.get('/stats', async (req, res) => {
 // });
 
 // ===================================================================
-// AUTO-EXIT SCHEDULER
+// START: AUTO-EXIT SCHEDULER (REVISED AND MORE PRECISE)
 // ===================================================================
-let autoExitTask = null;
-let AUTO_EXIT_HOUR = 21; // Default: 9 PM
-let AUTO_EXIT_MINUTE = 0;
+
+let autoExitTask = null; // This will hold our scheduled task
+let AUTO_EXIT_HOUR = 21; // Default: 9 PM IST
+let AUTO_EXIT_MINUTE = 0; // Default: 0 minutes
+
+// Function to stop the old task and start a new one with the updated time
 function scheduleAutoExit() {
   // If an old task exists, stop it before creating a new one
   if (autoExitTask) {
@@ -839,31 +842,39 @@ function scheduleAutoExit() {
   // Create the new scheduled task with the India time zone
   autoExitTask = cron.schedule(cronSchedule, async () => {
     const now = new Date();
-    // This log will only appear when the job runs at the correct time
     console.log(`[CRON SCHEDULER] ✅ Auto-exit triggered at ${now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`);
 
+    // --- NEW: Define the date range for ONLY TODAY ---
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0); // Set to the very beginning of today
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999); // Set to the very end of today
+    // --- END NEW ---
+
     try {
-      // This query finds all log entries where exitTime is not set and closes them.
+      // ✅ MODIFIED QUERY: This now only targets users who entered TODAY and haven't exited.
       const result = await Log.updateMany(
-        { exitTime: null },
-        { $set: { exitTime: now } } // Use the current time for the exit.
+        {
+          entryTime: { $gte: startOfToday, $lte: endOfToday }, // Condition 1: Entry was today
+          exitTime: null                                      // Condition 2: Still inside
+        },
+        { $set: { exitTime: now } } // Set their exit time to now
       );
 
-      console.log(`[CRON SCHEDULER] 🕘 Success: ${result.modifiedCount} open entries were closed.`);
+      console.log(`[CRON SCHEDULER] 🕘 Success: ${result.modifiedCount} of today's open entries were closed.`);
     } catch (err) {
       console.error("[CRON SCHEDULER] ❌ Auto-exit task failed:", err);
     }
   }, {
     scheduled: true,
-    timezone: "Asia/Kolkata" // This is the crucial fix!
+    timezone: "Asia/Kolkata" // Ensures the scheduler runs on India time
   });
 
-  // This log confirms the job has been set for the correct IST time
   console.log(`[CRON SCHEDULER] 🚀 Auto-exit job scheduled to run daily at ${AUTO_EXIT_HOUR}:${String(AUTO_EXIT_MINUTE).padStart(2, '0')} IST.`);
 }
 
-// Admin: update auto-exit time
-// This endpoint now requires authentication and restarts the cron job with the new time.
+// Admin: update auto-exit time (This endpoint remains the same)
 app.post('/admin/auto-exit', authenticateToken, isAdmin, (req, res) => {
   const { hour, minute } = req.body;
   
@@ -883,6 +894,11 @@ app.post('/admin/auto-exit', authenticateToken, isAdmin, (req, res) => {
 
 // Call the function once on server startup to schedule the initial default job
 scheduleAutoExit();
+
+// ===================================================================
+// END: AUTO-EXIT SCHEDULER
+// ===================================================================
+
 // Admin: force exit manually
 app.post('/admin/force-exit', authenticateToken, isAdmin, async (req, res) => {
   try {
