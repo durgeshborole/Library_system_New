@@ -132,7 +132,16 @@ const DesignationSchema = new mongoose.Schema({
 const Department = mongoose.model("Department", DepartmentSchema);
 const Designation = mongoose.model("Designation", DesignationSchema);
 
+// in server.js, with your other schemas
+const MessageSchema = new mongoose.Schema({
+  senderEmail: { type: String, required: true },
+  senderRole: { type: String, required: true }, // e.g., 'hod', 'principal'
+  message: { type: String, required: true },
+  isRead: { type: Boolean, default: false },
+  timestamp: { type: Date, default: Date.now }
+});
 
+const Message = mongoose.model("Message", MessageSchema);
 
 
 const visitorSchema = new mongoose.Schema({
@@ -2320,6 +2329,78 @@ app.post("/api/register-assistant", authenticateToken, isAdmin, async (req, res)
   }
 });
 
+// in server.js, with your other API routes
+
+// ===================================================================
+// START: MESSAGING SYSTEM ENDPOINTS
+// ===================================================================
+
+// Endpoint for HODs and Principals to send a message
+app.post('/api/messages', authenticateToken, async (req, res) => {
+  const { message } = req.body;
+  const { email, role } = req.user; // Get user details from JWT
+
+  if (!message) {
+    return res.status(400).json({ success: false, message: "Message content cannot be empty." });
+  }
+
+  // Allow only HODs and Principals to send messages
+  if (role !== 'hod' && role !== 'principal') {
+    return res.status(403).json({ success: false, message: "You do not have permission to send messages." });
+  }
+
+  try {
+    const newMessage = new Message({
+      senderEmail: email,
+      senderRole: role,
+      message: message
+    });
+    await newMessage.save();
+    
+    // Notify admins in real-time about the new message
+    io.emit('newMessage');
+    
+    res.status(201).json({ success: true, message: "Message sent successfully." });
+  } catch (error) {
+    console.error("❌ Error sending message:", error);
+    res.status(500).json({ success: false, message: "Server error while sending message." });
+  }
+});
+
+// Endpoint for Admins to get all messages
+app.get('/api/messages', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    // Fetch newest messages first
+    const messages = await Message.find().sort({ timestamp: -1 });
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error("❌ Error fetching messages:", error);
+    res.status(500).json({ success: false, message: "Server error while fetching messages." });
+  }
+});
+
+// Endpoint for Admins to mark a message as read
+app.put('/api/messages/:id/read', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const message = await Message.findByIdAndUpdate(
+      req.params.id,
+      { isRead: true },
+      { new: true }
+    );
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found." });
+    }
+    io.emit('messageUpdate'); // Notify to update UI
+    res.status(200).json({ success: true, message: "Message marked as read." });
+  } catch (error) {
+    console.error("❌ Error marking message as read:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+});
+
+// ===================================================================
+// END: MESSAGING SYSTEM ENDPOINTS
+// ===================================================================
 
 
 server.listen(PORT, () => {

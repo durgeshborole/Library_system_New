@@ -108,27 +108,30 @@
         }
 
         .profile-dropdown {
-            display: none; /* Hidden by default */
+            display: none;
+            /* Hidden by default */
             position: absolute;
             top: 50px;
             right: 0;
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             z-index: 100;
             width: 200px;
         }
 
         .profile-dropdown.show {
-            display: block; /* Shown by JavaScript */
+            display: block;
+            /* Shown by JavaScript */
         }
-        
+
         .profile-details {
             padding: 15px;
             border-bottom: 1px solid #f0f0f0;
         }
 
-        .profile-name, .profile-email {
+        .profile-name,
+        .profile-email {
             margin: 0;
             font-size: 0.9rem;
             color: #333;
@@ -174,9 +177,9 @@
 
         <div class="profile-container">
             <a href="index.html" class="nav-button" id="loginBtn" style="display: none;">Login</a>
-            
+
             <div class="profile" id="profileMenu" style="display: block;">
-                <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" alt="Profile"/>
+                <img src="./images/profile-icon.jpg" class="profile-icon" id="profileIcon" alt="Profile" />
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="profile-details">
                         <p class="profile-name">HOD</p>
@@ -225,6 +228,12 @@
                 </table>
             </div>
         </section>
+        <section class="card">
+            <h3>✉️ Contact Admin</h3>
+            <p>Send a suggestion or report an issue directly to the admin.</p>
+            <textarea id="hodMessageText" rows="4" placeholder="Type your message here..."></textarea>
+            <button onclick="sendMessageFromHOD()">Send Message</button>
+        </section>
     </main>
 
     <footer class="footer">
@@ -234,15 +243,50 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
 
+
+            // in hod-dashboard.html, inside the main <script> tag
+
+            async function sendMessageFromHOD() {
+                const messageText = document.getElementById("hodMessageText").value.trim();
+                const token = sessionStorage.getItem('authToken');
+
+                if (!messageText) {
+                    alert("Please enter a message before sending.");
+                    return;
+                }
+
+                try {
+                    const res = await fetch("/api/messages", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ message: messageText })
+                    });
+
+                    const result = await res.json();
+                    if (result.success) {
+                        alert("✅ Your message has been sent to the admin.");
+                        document.getElementById("hodMessageText").value = ""; // Clear the textarea
+                    } else {
+                        alert(`❌ Error: ${result.message}`);
+                    }
+                } catch (err) {
+                    console.error("Failed to send message:", err);
+                    alert("A server error occurred. Please try again later.");
+                }
+            }
+
             const authToken = sessionStorage.getItem('authToken');
-        const hodEmail = sessionStorage.getItem('hodEmail');
-        if (!authToken || !hodEmail) {
-            window.location.href = 'index.html';
-            return;
-        }
+            const hodEmail = sessionStorage.getItem('hodEmail');
+            if (!authToken || !hodEmail) {
+                window.location.href = 'index.html';
+                return;
+            }
             // --- Get User Details from sessionStorage ---
             const hodDepartment = sessionStorage.getItem('hodDepartment');
-            
+
 
             // --- DOM Elements ---
             const loginBtn = document.getElementById('loginBtn');

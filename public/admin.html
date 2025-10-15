@@ -176,13 +176,22 @@
       <button onclick="addDesignation()">Add Designation</button>
     </section>
 
-    <main class="dashboard">
-    <section class="card">
-      <h3>Register Assistant</h3>
-      <p>Create a new account for log entry assistants.</p>
-      <button onclick="location.href='register-assistant.html'">Register Assistant</button>
+    <section class="card" style="grid-column: 1 / -1;">
+      <h3>📥 Inbox (Complaints & Suggestions)</h3>
+      <ul id="messageList" style="list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto;">
+        <li>Loading messages...</li>
+      </ul>
     </section>
+
+    <main class="dashboard">
+      <section class="card">
+        <h3>Register Assistant</h3>
+        <p>Create a new account for log entry assistants.</p>
+        <button onclick="location.href='register-assistant.html'">Register Assistant</button>
+      </section>
     </main>
+
+
 
 
 
@@ -203,50 +212,50 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const authToken = sessionStorage.getItem('authToken');
-        if (!authToken) {
-            // If no token is found, immediately redirect to the login page
-            window.location.href = 'index.html';
-            return; // Stop the rest of the script from running
-        }
+    if (!authToken) {
+      // If no token is found, immediately redirect to the login page
+      window.location.href = 'index.html';
+      return; // Stop the rest of the script from running
+    }
 
-        // --- Original Page Logic (only runs if the user is logged in) ---
-        const loginBtn = document.getElementById('loginBtn');
-        const profileMenu = document.getElementById('profileMenu');
-        const profileIcon = document.getElementById('profileIcon');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const logoutBtn = document.getElementById('logoutBtn');
-        
-        // This logic now only runs for authenticated users
-        const adminEmail = sessionStorage.getItem('adminEmail'); // Or userEmail, etc.
+    // --- Original Page Logic (only runs if the user is logged in) ---
+    const loginBtn = document.getElementById('loginBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileIcon = document.getElementById('profileIcon');
+    const profileDropdown = document.getElementById('profileDropdown');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-        if (adminEmail) {
-            loginBtn.style.display = 'none';
-            profileMenu.style.display = 'block';
-            document.querySelector('.profile-email').textContent = adminEmail;
-        } else {
-            // This case should ideally not be reached because of the gatekeeper
-            loginBtn.style.display = 'block';
-            profileMenu.style.display = 'none';
-        }
+    // This logic now only runs for authenticated users
+    const adminEmail = sessionStorage.getItem('adminEmail'); // Or userEmail, etc.
 
-        profileIcon.addEventListener('click', (event) => {
-            profileDropdown.classList.toggle('show');
-            event.stopPropagation();
-        });
+    if (adminEmail) {
+      loginBtn.style.display = 'none';
+      profileMenu.style.display = 'block';
+      document.querySelector('.profile-email').textContent = adminEmail;
+    } else {
+      // This case should ideally not be reached because of the gatekeeper
+      loginBtn.style.display = 'block';
+      profileMenu.style.display = 'none';
+    }
 
-        window.addEventListener('click', () => {
-            if (profileDropdown.classList.contains('show')) {
-                profileDropdown.classList.remove('show');
-            }
-        });
+    profileIcon.addEventListener('click', (event) => {
+      profileDropdown.classList.toggle('show');
+      event.stopPropagation();
+    });
 
-        logoutBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            sessionStorage.removeItem('authToken');
-            sessionStorage.removeItem('adminEmail');
-            alert('You have been logged out.');
-            window.location.href = 'index.html';
-        });
+    window.addEventListener('click', () => {
+      if (profileDropdown.classList.contains('show')) {
+        profileDropdown.classList.remove('show');
+      }
+    });
+
+    logoutBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('adminEmail');
+      alert('You have been logged out.');
+      window.location.href = 'index.html';
+    });
   });
 </script>
 

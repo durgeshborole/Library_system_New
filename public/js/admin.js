@@ -11,7 +11,7 @@ async function updateAutoExit() {
     alert("Please fill both hour and minute.");
     return;
   }
-  
+
   if (!token) {
     alert("Authentication error. Please log in again.");
     return;
@@ -20,7 +20,7 @@ async function updateAutoExit() {
   try {
     const res = await fetch("/admin/auto-exit", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}` // Include the auth token
       },
@@ -29,9 +29,9 @@ async function updateAutoExit() {
 
     const result = await res.json();
     if (result.success) {
-        alert("✅ " + result.message);
+      alert("✅ " + result.message);
     } else {
-        alert("❌ Error: " + result.message);
+      alert("❌ Error: " + result.message);
     }
   } catch (err) {
     console.error("Auto-exit update failed:", err);
@@ -69,6 +69,94 @@ async function forceExit() {
   }
 }
 
+// in admin.js
+
+// Function to load messages into the admin inbox
+async function loadMessages() {
+  const messageList = document.getElementById("messageList");
+  const token = sessionStorage.getItem('authToken');
+
+  try {
+    const res = await fetch("/api/messages", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const messages = await res.json();
+    messageList.innerHTML = ""; // Clear loader
+
+    if (messages.length === 0) {
+      messageList.innerHTML = "<li>No new messages.</li>";
+      return;
+    }
+
+    messages.forEach(msg => {
+      const li = document.createElement("li");
+      li.style.cssText = `
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        background-color: ${msg.isRead ? '#f9f9f9' : '#fff'};
+        font-weight: ${msg.isRead ? 'normal' : 'bold'};
+      `;
+
+      const senderInfo = `
+        <strong style="text-transform: capitalize;">${msg.senderRole}</strong> (${msg.senderEmail})
+        <span style="float: right; font-size: 0.8em; color: #777;">
+          ${new Date(msg.timestamp).toLocaleString()}
+        </span>
+      `;
+      const messageContent = `<p style="margin: 5px 0;">${msg.message}</p>`;
+
+      let actions = '';
+      if (!msg.isRead) {
+        actions = `<button onclick="markAsRead('${msg._id}')">Mark as Read</button>`;
+      }
+
+      li.innerHTML = senderInfo + messageContent + actions;
+      messageList.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error("Failed to load messages:", err);
+    messageList.innerHTML = "<li>Error loading messages.</li>";
+  }
+}
+
+// Function to mark a message as read
+async function markAsRead(messageId) {
+  const token = sessionStorage.getItem('authToken');
+  try {
+    await fetch(`/api/messages/${messageId}/read`, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    loadMessages(); // Refresh the list
+  } catch (err) {
+    console.error("Failed to mark message as read:", err);
+    alert("Error updating message status.");
+  }
+}
+
+// Real-time updates with Socket.IO
+const socket = io();
+socket.on('newMessage', () => {
+  console.log('📬 New message received, reloading inbox...');
+  loadMessages();
+});
+socket.on('messageUpdate', () => {
+  loadMessages();
+});
+
+// Load messages when the admin page is opened
+document.addEventListener("DOMContentLoaded", () => {
+  // Make sure to call loadMessages along with your other initial functions
+  if (document.getElementById("messageList")) {
+    loadMessages();
+  }
+  // This just keeps your existing notice loader working
+  if (document.getElementById("adminNoticeList")) {
+    loadAdminNotices();
+  }
+});
+
 
 // async function exportLogs(type) {
 //   const endpoint = type === 'today' ? '/live-log' : '/all-logs';
@@ -100,7 +188,7 @@ async function exportLogs(type) {
   try {
     const res = await fetch(endpoint);
     if (!res.ok) {
-        throw new Error(`Failed to fetch logs from ${endpoint}`);
+      throw new Error(`Failed to fetch logs from ${endpoint}`);
     }
     const logs = await res.json();
 
@@ -127,11 +215,11 @@ async function exportLogs(type) {
 
     // 4. Set column widths to be more readable (optional but recommended).
     worksheet["!cols"] = [
-        { wch: 25 }, // Name
-        { wch: 25 }, // Department
-        { wch: 15 }, // Designation
-        { wch: 22 }, // Entry Time
-        { wch: 22 }  // Exit Time
+      { wch: 25 }, // Name
+      { wch: 25 }, // Department
+      { wch: 15 }, // Designation
+      { wch: 22 }, // Entry Time
+      { wch: 22 }  // Exit Time
     ];
 
     // 5. Trigger the download of the .xlsx file.
@@ -162,9 +250,9 @@ async function submitNotice() {
     const res = await fetch("/admin/notices", {
       method: "POST",
       // ✅ ADDED: Headers with authentication token
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}` 
+        "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({ text: noticeText })
     });
