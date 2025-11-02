@@ -61,9 +61,22 @@
             border: 2px dashed #e50914;
             padding: 20px;
         }
+        
+        /* ✅ ADDED: Styles for the month selector */
+        .month-selector {
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-        .consistency-crown h3 {
-            margin-top: 0;
+        .month-selector label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .month-selector select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
@@ -85,14 +98,12 @@
 
     <nav class="navbar">
         <div class="logo">Awards</div>
-
         <ul class="nav-links">
             <li><a href="dashboard.html">Home</a></li>
             <li><a href="log.html">Log Entries</a></li>
             <li><a href="analysis.html">Analysis</a></li>
             <li><a href="admin.html">Admin</a></li>
         </ul>
-
         <div class="profile-container">
             <a href="index.html" class="nav-button" id="loginBtn">Login</a>
             <div class="profile" id="profileMenu" style="display: none;">
@@ -108,15 +119,14 @@
         </div>
     </nav>
 
+
     <main class="awards-container">
         <section class="instructions">
             <h2>🏆 Monthly Library Awards</h2>
-            <p>This leaderboard recognizes the students who have dedicated the most time to learning in the library this
-                month. Here's how it works:</p>
+            <p>This leaderboard recognizes the students who have dedicated the most time to learning in the library. Use the dropdown to view winners from previous months.</p>
             <ul>
                 <li>Rankings are based on the <strong>total time spent</strong> in the library.</li>
                 <li>Only visits with both an <strong>entry and an exit time</strong> are counted.</li>
-                <li>The leaderboard is automatically updated and resets at the beginning of each month.</li>
             </ul>
         </section>
 
@@ -128,7 +138,13 @@
         </section>
 
         <section class="awards-section">
-            <h2>📚 Top Scholars Leaderboard</h2>
+            <h2 id="leaderboardTitle">📚 Top Scholars Leaderboard</h2>
+            
+            <div class="month-selector">
+                <label for="monthSelector">View Awards For:</label>
+                <select id="monthSelector"></select>
+            </div>
+
             <table class="leaderboard">
                 <thead>
                     <tr>
@@ -151,76 +167,111 @@
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const leaderboardBody = document.getElementById('awardsLeaderboard');
             const consistencyWinnerDiv = document.getElementById('consistencyWinner');
+            const leaderboardTitle = document.getElementById('leaderboardTitle');
+            const monthSelector = document.getElementById('monthSelector');
 
-            try {
-                const response = await fetch('/api/monthly-awards');
-                if (!response.ok) throw new Error('Failed to fetch awards data.');
-
-                const data = await response.json();
-
-                // --- Populate Top Scholars Leaderboard ---
-                leaderboardBody.innerHTML = '';
-                if (data.topScholars && data.topScholars.length > 0) {
-                    data.topScholars.forEach((student, index) => {
-                        const row = `
-                            <tr>
-                                <td class="rank">${index + 1}</td>
-                                <td>${student.visitorInfo.name || 'Unknown'}</td>
-                                <td>${student.totalDurationFormatted}</td>
-                            </tr>`;
-                        leaderboardBody.innerHTML += row;
-                    });
-                } else {
-                    leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No completed library visits recorded this month.</td></tr>';
+            // --- Function to populate the month selector dropdown ---
+            function populateMonthSelector() {
+                const today = new Date();
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1; // JS months are 0-indexed
+                    const monthName = date.toLocaleString('default', { month: 'long' });
+                    
+                    const option = document.createElement('option');
+                    option.value = `${year}-${month}`;
+                    option.textContent = `${monthName} ${year}`;
+                    monthSelector.appendChild(option);
                 }
-
-                // --- Populate Consistency Crown Winner ---
-                if (data.consistencyWinner) {
-                    const winner = data.consistencyWinner;
-                    consistencyWinnerDiv.innerHTML = `
-                        <h3>Awarded to: ${winner.visitorInfo.name || 'Unknown'}</h3>
-                        <p>For visiting the library most of the time this month!</p>
-                    `;
-                } else {
-                    consistencyWinnerDiv.innerHTML = '<p>No one has visited on multiple days yet this month.</p>';
-                }
-
-            } catch (error) {
-                console.error("Error fetching awards:", error);
-                leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:red;">${error.message}</td></tr>`;
-                consistencyWinnerDiv.innerHTML = `<p style="color:red;">Could not load data.</p>`;
             }
+
+            // --- Function to fetch and display awards for a given month/year ---
+            async function fetchAndDisplayAwards(year, month) {
+                // Set loading states
+                leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Loading rankings...</td></tr>';
+                consistencyWinnerDiv.innerHTML = '<p>Loading...</p>';
+
+                let url = '/api/monthly-awards';
+                if (year && month) {
+                    url += `?year=${year}&month=${month}`;
+                }
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch awards data.');
+                    const data = await response.json();
+
+                    // --- Populate Top Scholars Leaderboard ---
+                    leaderboardBody.innerHTML = '';
+                    if (data.topScholars && data.topScholars.length > 0) {
+                        data.topScholars.forEach((student, index) => {
+                            const row = `
+                                <tr>
+                                    <td class="rank">${index + 1}</td>
+                                    <td>${student.visitorInfo.name || 'Unknown'}</td>
+                                    <td>${student.totalDurationFormatted}</td>
+                                </tr>`;
+                            leaderboardBody.innerHTML += row;
+                        });
+                    } else {
+                        leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No completed library visits recorded this month.</td></tr>';
+                    }
+
+                    // --- Populate Consistency Crown Winner ---
+                    if (data.consistencyWinner) {
+                        const winner = data.consistencyWinner;
+                        consistencyWinnerDiv.innerHTML = `
+                            <h3>Awarded to: ${winner.visitorInfo.name || 'Unknown'}</h3>
+                            <p>For visiting the library most often this month!</p>
+                        `;
+                    } else {
+                        consistencyWinnerDiv.innerHTML = '<p>No one has visited on multiple days yet this month.</p>';
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching awards:", error);
+                    leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:red;">${error.message}</td></tr>`;
+                    consistencyWinnerDiv.innerHTML = `<p style="color:red;">Could not load data.</p>`;
+                }
+            }
+
+            // --- Event Listener for month selector ---
+            monthSelector.addEventListener('change', (event) => {
+                const [year, month] = event.target.value.split('-');
+                const selectedOptionText = event.target.options[event.target.selectedIndex].text;
+                leaderboardTitle.textContent = `📚 Top Scholars Leaderboard - ${selectedOptionText}`;
+                fetchAndDisplayAwards(year, month);
+            });
+
+            // --- Initial Load ---
+            populateMonthSelector();
+            fetchAndDisplayAwards(); // Fetch current month data by default on page load
         });
     </script>
     <script>
        document.addEventListener('DOMContentLoaded', () => {
-        // --- Gatekeeper Script ---
         const authToken = sessionStorage.getItem('authToken');
         if (!authToken) {
-            // If no token is found, immediately redirect to the login page
             window.location.href = 'index.html';
-            return; // Stop the rest of the script from running
+            return; 
         }
 
-        // --- Original Page Logic (only runs if the user is logged in) ---
         const loginBtn = document.getElementById('loginBtn');
         const profileMenu = document.getElementById('profileMenu');
         const profileIcon = document.getElementById('profileIcon');
         const profileDropdown = document.getElementById('profileDropdown');
         const logoutBtn = document.getElementById('logoutBtn');
-        
-        // This logic now only runs for authenticated users
-        const adminEmail = sessionStorage.getItem('adminEmail'); // Or userEmail, etc.
+        const adminEmail = sessionStorage.getItem('adminEmail');
 
         if (adminEmail) {
             loginBtn.style.display = 'none';
             profileMenu.style.display = 'block';
             document.querySelector('.profile-email').textContent = adminEmail;
         } else {
-            // This case should ideally not be reached because of the gatekeeper
             loginBtn.style.display = 'block';
             profileMenu.style.display = 'none';
         }

@@ -1344,49 +1344,134 @@ app.post('/face-entry', async (req, res) => {
 });
 
 
-app.get('/admin/monthly-awards', async (req, res) => {
+// app.get('/admin/monthly-awards', async (req, res) => {
+//   try {
+//     const now = new Date();
+//     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+//     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+//     // Fetch logs for current month
+//     const logs = await Log.find({
+//       entryTime: { $gte: startOfMonth, $lte: endOfMonth },
+//       designation: "Student"
+//     });
+
+//     // Count visits per student
+//     const studentVisits = {};
+//     const deptVisits = {};
+
+//     for (const log of logs) {
+//       if (!studentVisits[log.barcode]) {
+//         studentVisits[log.barcode] = { count: 0, name: log.name };
+//       }
+//       studentVisits[log.barcode].count++;
+
+//       if (log.department) {
+//         deptVisits[log.department] = (deptVisits[log.department] || 0) + 1;
+//       }
+//     }
+
+//     // Top student
+//     const topStudent = Object.entries(studentVisits)
+//       .sort((a, b) => b[1].count - a[1].count)[0];
+
+//     // Top department
+//     const topDept = Object.entries(deptVisits)
+//       .sort((a, b) => b[1] - a[1])[0];
+
+//     res.status(200).json({
+//       topStudent: topStudent ? { barcode: topStudent[0], name: topStudent[1].name, visits: topStudent[1].count } : null,
+//       topDepartment: topDept ? { name: topDept[0], visits: topDept[1] } : null
+//     });
+
+//   } catch (err) {
+//     console.error("❌ Error in monthly awards:", err);
+//     res.status(500).json({ error: "Failed to generate awards" });
+//   }
+// });
+
+app.get('/api/monthly-awards', async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    // Use query parameters if provided, otherwise default to the current month and year
+    const year = req.query.year ? parseInt(req.query.year) : now.getFullYear();
+    // Note: JS months are 0-indexed (Jan=0), so we subtract 1 from the provided month
+    const month = req.query.month ? parseInt(req.query.month) - 1 : now.getMonth();
 
-    // Fetch logs for current month
-    const logs = await Log.find({
-      entryTime: { $gte: startOfMonth, $lte: endOfMonth },
-      designation: "Student"
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999); // Ensure it includes the entire last day
+
+    const rankings = await Log.aggregate([
+      // 1. Filter for logs within the current month that are completed (have an exit time)
+      {
+        $match: {
+          entryTime: { $gte: startOfMonth, $lte: endOfMonth },
+          exitTime: { $exists: true, $ne: null }
+        }
+      },
+      // 2. Group by student barcode
+      {
+        $group: {
+          _id: "$barcode", // Group by the visitor's barcode
+          totalDuration: {
+            $sum: { $subtract: ["$exitTime", "$entryTime"] } // Sum the duration of all visits in milliseconds
+          },
+          uniqueDays: {
+            $addToSet: { $dateToString: { format: "%Y-%m-%d", date: "$entryTime" } } // Count unique days visited
+          }
+        }
+      },
+      // 3. Join with the visitors collection to get student names
+      {
+        $lookup: {
+          from: "visitors", // The actual name of the visitors collection in MongoDB
+          localField: "_id",
+          foreignField: "barcode",
+          as: "visitorInfo"
+        }
+      },
+      // 4. Unwind the visitorInfo array to make it an object
+      {
+        $unwind: "$visitorInfo"
+      },
+      // 5. Sort by total duration descending
+      {
+        $sort: {
+          totalDuration: -1
+        }
+      },
+      // 6. Add a field for the count of unique days
+      {
+        $addFields: {
+          uniqueDaysCount: { $size: "$uniqueDays" }
+        }
+      }
+    ]);
+
+    // Format the duration from milliseconds to a human-readable string
+    const formattedRankings = rankings.map(r => {
+      const totalSeconds = Math.floor(r.totalDuration / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return {
+        ...r,
+        totalDurationFormatted: `${hours} hours, ${minutes} minutes, ${seconds} seconds`,
+      };
     });
 
-    // Count visits per student
-    const studentVisits = {};
-    const deptVisits = {};
-
-    for (const log of logs) {
-      if (!studentVisits[log.barcode]) {
-        studentVisits[log.barcode] = { count: 0, name: log.name };
-      }
-      studentVisits[log.barcode].count++;
-
-      if (log.department) {
-        deptVisits[log.department] = (deptVisits[log.department] || 0) + 1;
-      }
-    }
-
-    // Top student
-    const topStudent = Object.entries(studentVisits)
-      .sort((a, b) => b[1].count - a[1].count)[0];
-
-    // Top department
-    const topDept = Object.entries(deptVisits)
-      .sort((a, b) => b[1] - a[1])[0];
+    // Find the consistency winner (most unique days)
+    const consistencyWinner = [...formattedRankings].sort((a, b) => b.uniqueDaysCount - a.uniqueDaysCount)[0];
 
     res.status(200).json({
-      topStudent: topStudent ? { barcode: topStudent[0], name: topStudent[1].name, visits: topStudent[1].count } : null,
-      topDepartment: topDept ? { name: topDept[0], visits: topDept[1] } : null
+      topScholars: formattedRankings,
+      consistencyWinner: consistencyWinner
     });
 
-  } catch (err) {
-    console.error("❌ Error in monthly awards:", err);
-    res.status(500).json({ error: "Failed to generate awards" });
+  } catch (error) {
+    console.error("❌ Error calculating monthly awards:", error);
+    res.status(500).json({ message: "Server error while calculating awards." });
   }
 });
 
